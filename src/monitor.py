@@ -162,4 +162,5 @@ def monitor():
 
         time.sleep(3)
 
-monitor()
+if __name__ == '__main__':
+    monitor()

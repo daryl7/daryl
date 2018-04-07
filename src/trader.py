@@ -1,33 +1,44 @@
 import csv
 import time
 import os
+import yaml
 from enum import IntEnum, auto
-
-output_filename = './trade_timing.txt'
-upper_limit = 7000
-under_limit = 3000
 
 class CoinStatus(IntEnum):
     BitFlyer = auto()
     CoinCheck = auto()
 
-tsv = csv.reader(open("results_BF_BN.txt", "r"), delimiter = '\t')
-if os.path.exists(output_filename):
-    os.remove(output_filename)
+class Trader:
+    def __init__(self, *args, **kwargs):
+        with open('config.yml', 'r') as yml:
+            config = yaml.load(yml)
+            self.upper_limit = config['trader']['upper_limit']
+            self.under_limit = config['trader']['under_limit']
+            self.output_filename = './trade_timing.txt'
 
-coin_status = CoinStatus.BitFlyer
+    def write_trade_timing(self, row):
+        print(".")
+        with open(self.output_filename, mode = 'a', encoding = 'utf-8') as fh:
+            fh.write(row + '\n')
 
-def write_trade_timing(row):
-    print(".")
-    with open(output_filename, mode = 'a', encoding = 'utf-8') as fh:
-        fh.write(row + '\n')
+    def main(self):
+        tsv = csv.reader(open("results_BF_BN.txt", "r"), delimiter = '\t')
+        if os.path.exists(self.output_filename):
+            os.remove(self.output_filename)
 
-for row in tsv:
-    diff = float(row[1])
-
-    if coin_status == CoinStatus.BitFlyer and diff >= upper_limit:
-        coin_status = CoinStatus.CoinCheck
-        write_trade_timing("\t".join(row))
-    elif coin_status == CoinStatus.CoinCheck and diff < under_limit:
         coin_status = CoinStatus.BitFlyer
-        write_trade_timing("\t".join(row))
+        for row in tsv:
+            diff = float(row[1])
+
+            if coin_status == CoinStatus.BitFlyer and diff >= self.upper_limit:
+                coin_status = CoinStatus.CoinCheck
+                self.write_trade_timing("\t".join(row))
+            elif coin_status == CoinStatus.CoinCheck and diff < self.under_limit:
+                coin_status = CoinStatus.BitFlyer
+                self.write_trade_timing("\t".join(row))
+
+
+if __name__ == '__main__':
+    trader = Trader()
+    trader.main()
+

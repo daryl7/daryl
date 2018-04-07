@@ -8,6 +8,13 @@ import urllib.request
 import json
 import sys
 import datetime
+import yaml
+
+with open('config.yml', 'r') as yml:
+    config = yaml.load(yml)
+
+bitflyer_api_key = config['bitflyer']['api_key']
+bitflyer_api_secret = config['bitflyer']['api_secret']
 
 def fetch_url(req, max_times=100, sleep_sec=10):
     retry_count = 0

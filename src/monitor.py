@@ -20,8 +20,9 @@ class Monitor:
         cc_bid = self.coincheck.bid
         cc_ask = self.coincheck.ask
 
-        self.bf_cc_diff = bf_bid - cc_bid
-        res = '\t'.join([self.dt, str(self.bf_cc_diff), str(bf_bid), str(cc_bid), str(bf_ask), str(cc_ask)])
+        self.bf_cc_diff = bf_ask - cc_bid
+        self.cc_bf_diff = cc_ask - bf_bid
+        res = '\t'.join([self.dt, str(self.bf_cc_diff), str(self.cc_bf_diff), str(bf_bid), str(bf_ask), str(cc_bid), str(cc_ask)])
         # print(res)
         with open('results_BF_CC.txt', mode = 'a', encoding = 'utf-8') as fh:
             fh.write(res + '\n')

@@ -21,7 +21,6 @@ class Trader:
             self.output_filename = './trade_timing.txt'
 
     def write_trade_timing(self, row):
-        print(".")
         with open(self.output_filename, mode = 'a', encoding = 'utf-8') as fh:
             fh.write(row + '\n')
 
@@ -47,6 +46,9 @@ class Trader:
         selling_exchange.sell_order(dryrun)
 
     def trade(self, dryrun = True):
+        if os.path.exists(self.output_filename):
+            os.remove(self.output_filename)
+
         coin_status = CoinStatus.BitFlyer
         mon = Monitor()
         # while True:
@@ -67,9 +69,11 @@ class Trader:
             if coin_status == CoinStatus.BitFlyer and mon.bf_bn_diff >= self.bf_bn_limit:
                 coin_status = CoinStatus.Binance
                 self.decision_and_order(mon, mon.binance, mon.bitflyer, mon.bf_bn_diff, dryrun)
+                self.write_trade_timing("\t".join(row))
             elif coin_status == CoinStatus.Binance and mon.bn_bf_diff >= self.bn_bf_limit:
                 coin_status = CoinStatus.BitFlyer
                 self.decision_and_order(mon, mon.bitflyer, mon.binance, mon.bn_bf_diff, dryrun)
+                self.write_trade_timing("\t".join(row))
 
             #time.sleep(3)
 

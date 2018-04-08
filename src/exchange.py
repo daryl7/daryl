@@ -67,7 +67,18 @@ class BitFlyer:
     def buy_order(self, dryrun):
         print("\tbuy_order: BitFlyer, " + str(self.ask + config['trader']['order_offset_jpy']))
         if(not dryrun):
-            print("todo")
+            param = {
+                "product_code": "BTC_JPY",
+                "child_order_type": "LIMIT",
+                "side": "BUY",
+                "price": self.ask,
+                "size": 0.1,
+                "minute_to_expire": 10000,
+                "time_in_force": "GTC"
+            }
+            with BitFlyer.__urlopen("POST", "/v1/me/sendparentorder", param = param) as res:
+                html = res.read().decode("utf-8")
+                print(json.loads(html))
 
     def sell_order(self, dryrun):
         print("\tsell_order: BitFlyer, " + str(self.bid - config['trader']['order_offset_jpy']))

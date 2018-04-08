@@ -32,7 +32,9 @@ def fetch_url(req, max_times=100, sleep_sec=10):
 
 class BitFlyer:
     __api_endpoint = 'https://api.bitflyer.jp'
-    def urlopen(method, path, *, param={}):
+
+    @staticmethod
+    def __urlopen(method, path, *, param={}):
         timestamp = str(time.time())
         text = timestamp + method + path
         sign = hmac.new(bytes(bitflyer_api_secret.encode('ascii')), bytes(text.encode('ascii')), hashlib.sha256).hexdigest()
@@ -47,7 +49,8 @@ class BitFlyer:
         req = urllib.request.Request(url=BitFlyer.__api_endpoint + path + "?" + urllib.parse.urlencode(param), headers=headers)
         return fetch_url(req)
 
-    def urlopen_public(method, path, *, param={}):
+    @staticmethod
+    def __urlopen_public(method, path, *, param={}):
         headers = {
             'user-agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36',
             'Content-Type': 'application/json'
@@ -55,22 +58,18 @@ class BitFlyer:
         req = urllib.request.Request(url=BitFlyer.__api_endpoint + path + "?" + urllib.parse.urlencode(param), headers=headers)
         return fetch_url(req)
 
-    def get_bid():
-        with BitFlyer.urlopen_public("GET", "/v1/ticker", param = {"product_code":"BTC_JPY"}) as res:
+    def refresh_ticker(self):
+        with BitFlyer.__urlopen_public("GET", "/v1/ticker", param = {"product_code":"BTC_JPY"}) as res:
             html = res.read().decode("utf-8")
-            v = int(json.loads(html)["best_bid"])
-        return v
-
-    def get_ask():
-        with BitFlyer.urlopen_public("GET", "/v1/ticker", param = {"product_code":"BTC_JPY"}) as res:
-            html = res.read().decode("utf-8")
-            v = int(json.loads(html)["best_ask"])
-        return v
+            self.bid = int(json.loads(html)["best_bid"])
+            self.ask = int(json.loads(html)["best_ask"])
 
 
 class CoinCheck:
     __api_endpoint = "https://coincheck.com"
-    def urlopen(method, path, *, param={}):
+
+    @staticmethod
+    def __urlopen(method, path, *, param={}):
         timestamp = str(time.time())
         headers = {
             'ACCESS-TIMESTAMP': timestamp,
@@ -79,21 +78,18 @@ class CoinCheck:
         req = urllib.request.Request(url=CoinCheck.__api_endpoint + path + "?" + urllib.parse.urlencode(param), headers=headers)
         return fetch_url(req)
 
-    def get_bid():
-        with CoinCheck.urlopen("GET", "/api/ticker") as res:
+    def refresh_ticker(self):
+        with CoinCheck.__urlopen("GET", "/api/ticker") as res:
             html = res.read().decode("utf-8")
-            v = int(json.loads(html)["bid"])
-        return v
+            self.bid = int(json.loads(html)["bid"])
+            self.ask = int(json.loads(html)["ask"])
 
-    def get_ask():
-        with CoinCheck.urlopen("GET", "/api/ticker") as res:
-            html = res.read().decode("utf-8")
-            v = int(json.loads(html)["ask"])
-        return v
 
 class Binance:
     __api_endpoint = "https://api.binance.com"
-    def urlopen(method, path, *, param={}):
+
+    @staticmethod
+    def __urlopen(method, path, *, param={}):
         timestamp = str(time.time())
         headers = {
             'ACCESS-TIMESTAMP': timestamp,
@@ -102,19 +98,15 @@ class Binance:
         req = urllib.request.Request(url=Binance.__api_endpoint + path + "?" + urllib.parse.urlencode(param), headers=headers)
         return fetch_url(req)
 
-    def get_bid():
-        with Binance.urlopen("GET", "/api/v3/ticker/bookTicker", param = {"symbol":"BTCUSDT"}) as res:
+    def refresh_ticker(self):
+        with Binance.__urlopen("GET", "/api/v3/ticker/bookTicker", param = {"symbol":"BTCUSDT"}) as res:
             html = res.read().decode("utf-8")
-            v = float(json.loads(html)["bidPrice"])
-        return v
+            self.bid = float(json.loads(html)["bidPrice"])
+            self.ask = float(json.loads(html)["askPrice"])
 
-    def get_ask():
-        with Binance.urlopen("GET", "/api/v3/ticker/bookTicker", param = {"symbol":"BTCUSDT"}) as res:
-            html = res.read().decode("utf-8")
-            v = float(json.loads(html)["askPrice"])
-        return v
 
 class LegalTender:
+    @staticmethod
     def get_rate_of_usdjpy():
         headers = {
             'user-agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36',

@@ -136,31 +136,36 @@ class LegalTender:
 #     print(json.loads(html))
 # sys.exit()
 
-def monitor():
-    while True:
-        dt = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+class Monitor:
+    def refresh(self):
+        self.dt = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        bf_bid = BitFlyer.get_bid()
-        bf_ask = BitFlyer.get_ask()
-        cc_bid = CoinCheck.get_bid()
-        cc_ask = CoinCheck.get_ask()
-        res = '\t'.join([dt, str(bf_bid - cc_bid), str(bf_bid), str(cc_bid), str(bf_ask), str(cc_ask)])
+        self.bf_bid = BitFlyer.get_bid()
+        self.bf_ask = BitFlyer.get_ask()
+        self.cc_bid = CoinCheck.get_bid()
+        self.cc_ask = CoinCheck.get_ask()
+        self.bf_cc_diff = self.bf_bid - self.cc_bid
+        res = '\t'.join([self.dt, str(self.bf_cc_diff), str(self.bf_bid), str(self.cc_bid), str(self.bf_ask), str(self.cc_ask)])
         # print(res)
         with open('results_BF_CC.txt', mode = 'a', encoding = 'utf-8') as fh:
             fh.write(res + '\n')
 
-        usdjpy = LegalTender.get_rate_of_usdjpy()
-        bn_bid_usd = Binance.get_bid()
-        bn_ask_usd = Binance.get_ask()
-        bn_bid_jpy = int(float(bn_bid_usd) * usdjpy)
-        bn_ask_jpy = int(float(bn_ask_usd) * usdjpy)
-
-        res = '\t'.join([dt, str(bf_bid - bn_bid_jpy), str(bf_bid), str(bf_ask), str(bn_bid_usd), str(bn_ask_usd), str(usdjpy)])
+        self.usdjpy = LegalTender.get_rate_of_usdjpy()
+        self.bn_bid_usd = Binance.get_bid()
+        self.bn_ask_usd = Binance.get_ask()
+        self.bn_bid_jpy = int(float(self.bn_bid_usd) * self.usdjpy)
+        self.bn_ask_jpy = int(float(self.bn_ask_usd) * self.usdjpy)
+        self.bf_bn_diff = self.bf_bid - self.bn_bid_jpy
+        res = '\t'.join([self.dt, str(self.bf_bn_diff), str(self.bf_bid), str(self.bf_ask), str(self.bn_bid_usd), str(self.bn_ask_usd), str(self.usdjpy)])
         print(res)
         with open('results_BF_BN.txt', mode = 'a', encoding = 'utf-8') as fh:
             fh.write(res + '\n')
 
+def monitor_test_mode():
+    mon = Monitor()
+    while True:
+        mon.refresh()
         time.sleep(3)
 
 if __name__ == '__main__':
-    monitor()
+    monitor_test_mode()

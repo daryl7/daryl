@@ -26,13 +26,13 @@ def fetch_url(req, max_times=100, sleep_sec=10):
         except urllib.error.HTTPError as err:
             print("HTTPError:" + str(err.code) + ":" + req.get_full_url())
             time.sleep(sleep_sec)
+
         except urllib.error.URLError as err:
             print("URLError:" + str(err.reason) + ":" + req.get_full_url())
             time.sleep(sleep_sec)
 
 class BitFlyer:
     __api_endpoint = 'https://api.bitflyer.jp'
-
     @staticmethod
     def __urlopen(method, path, *, param={}):
         timestamp = str(time.time())
@@ -63,6 +63,12 @@ class BitFlyer:
             html = res.read().decode("utf-8")
             self.bid = int(json.loads(html)["best_bid"])
             self.ask = int(json.loads(html)["best_ask"])
+
+    def buy_order(self):
+        print("todo")
+
+    def sell_order(self):
+        print("todo")
 
 
 class CoinCheck:
@@ -103,6 +109,12 @@ class Binance:
             html = res.read().decode("utf-8")
             self.bid = float(json.loads(html)["bidPrice"])
             self.ask = float(json.loads(html)["askPrice"])
+
+    def buy_order(self):
+        print("todo")
+
+    def sell_order(self):
+        print("todo")
 
 
 class LegalTender:

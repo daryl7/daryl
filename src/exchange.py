@@ -64,11 +64,21 @@ class BitFlyer:
             self.bid = int(json.loads(html)["best_bid"])
             self.ask = int(json.loads(html)["best_ask"])
 
-    def buy_order(self):
+    def buy_order(self, dryrun):
         print("todo")
 
-    def sell_order(self):
+    def sell_order(self, dryrun):
         print("todo")
+
+    def buy_order(self, dryrun):
+        print("buy_order: BitFlyer, " + str(self.ask + config['trade']['order_offset_jpy']))
+        if(not dryrun):
+            print("todo")
+
+    def sell_order(self, dryrun):
+        print("sell_order: BitFlyer, " + str(self.bid - config['trade']['order_offset_jpy']))
+        if(not dryrun):
+            print("todo")
 
 
 class CoinCheck:
@@ -110,11 +120,15 @@ class Binance:
             self.bid = float(json.loads(html)["bidPrice"])
             self.ask = float(json.loads(html)["askPrice"])
 
-    def buy_order(self):
-        print("todo")
+    def buy_order(self, dryrun):
+        print("buy_order: Binance, " + str(self.ask + config['trade']['order_offset_usd']))
+        if(not dryrun):
+            print("todo")
 
-    def sell_order(self):
-        print("todo")
+    def sell_order(self, dryrun):
+        print("sell_order: Binance, " + str(self.bid - config['trade']['order_offset_usd']))
+        if(not dryrun):
+            print("todo")
 
 
 class LegalTender:

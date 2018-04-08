@@ -41,11 +41,11 @@ class Trader:
                 coin_status = CoinStatus.BitFlyer
                 self.write_trade_timing("\t".join(row))
 
-    def decision_and_order(self, monitor, buying_exchange_cls, selling_exchange_cls):
-        buying_exchange_cls.buy_order()
-        selling_exchange_cls.sell_order()
+    def decision_and_order(self, monitor, buying_exchange_cls, selling_exchange_cls, dryrun):
+        buying_exchange_cls.buy_order(dryrun)
+        selling_exchange_cls.sell_order(dryrun)
 
-    def trade(self):
+    def trade(self, dryrun = True):
         coin_status = CoinStatus.BitFlyer
         mon = Monitor()
         while True:
@@ -53,10 +53,10 @@ class Trader:
 
             if coin_status == CoinStatus.BitFlyer and mon.bf_bn_diff >= self.upper_limit:
                 coin_status = CoinStatus.Binance
-                self.decision_and_order(mon, BitFlyer, Binance)
+                self.decision_and_order(mon, BitFlyer, Binance, dryrun)
             elif coin_status == CoinStatus.Binance and mon.bf_bn_diff < self.under_limit:
                 coin_status = CoinStatus.BitFlyer
-                self.decision_and_order(mon, Binance, BitFlyer)
+                self.decision_and_order(mon, Binance, BitFlyer, dryrun)
 
             time.sleep(3)
 

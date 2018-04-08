@@ -1,7 +1,4 @@
-from exchange import BitFlyer
-from exchange import CoinCheck
-from exchange import Binance
-from exchange import LegalTender
+from exchange import BitFlyer, CoinCheck, Binance, LegalTender
 import datetime
 import time
 

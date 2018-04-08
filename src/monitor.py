@@ -3,6 +3,10 @@ import datetime
 import time
 
 class Monitor:
+    def __init__(self, *args, **kwargs):
+        self.bitflyer = BitFlyer()
+        self.binance = Binance()
+
     def refresh(self):
         self.dt = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -29,9 +33,10 @@ class Monitor:
         bn_bid_usd = self.binance.bid
         bn_ask_usd = self.binance.ask
         bn_bid_jpy = int(float(bn_bid_usd) * usdjpy)
-        # bn_ask_jpy = int(float(bn_ask_usd) * usdjpy)
-        self.bf_bn_diff = bf_bid - bn_bid_jpy
-        res = '\t'.join([self.dt, str(self.bf_bn_diff), str(bf_bid), str(bf_ask), str(bn_bid_usd), str(bn_ask_usd), str(usdjpy)])
+        bn_ask_jpy = int(float(bn_ask_usd) * usdjpy)
+        self.bf_bn_diff = bf_ask - bn_bid_jpy
+        self.bn_bf_diff = bn_ask_jpy - bf_bid
+        res = '\t'.join([self.dt, str(self.bf_bn_diff), str(self.bn_bf_diff), str(bf_bid), str(bf_ask), str(bn_bid_usd), str(bn_ask_usd), str(usdjpy)])
         print(res)
         with open('results_BF_BN.txt', mode = 'a', encoding = 'utf-8') as fh:
             fh.write(res + '\n')

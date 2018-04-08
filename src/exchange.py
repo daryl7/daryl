@@ -65,18 +65,12 @@ class BitFlyer:
             self.ask = int(json.loads(html)["best_ask"])
 
     def buy_order(self, dryrun):
-        print("todo")
-
-    def sell_order(self, dryrun):
-        print("todo")
-
-    def buy_order(self, dryrun):
-        print("buy_order: BitFlyer, " + str(self.ask + config['trade']['order_offset_jpy']))
+        print("\tbuy_order: BitFlyer, " + str(self.ask + config['trader']['order_offset_jpy']))
         if(not dryrun):
             print("todo")
 
     def sell_order(self, dryrun):
-        print("sell_order: BitFlyer, " + str(self.bid - config['trade']['order_offset_jpy']))
+        print("\tsell_order: BitFlyer, " + str(self.bid - config['trader']['order_offset_jpy']))
         if(not dryrun):
             print("todo")
 
@@ -121,12 +115,12 @@ class Binance:
             self.ask = float(json.loads(html)["askPrice"])
 
     def buy_order(self, dryrun):
-        print("buy_order: Binance, " + str(self.ask + config['trade']['order_offset_usd']))
+        print("\tbuy_order: Binance, " + str(self.ask + config['trader']['order_offset_usd']))
         if(not dryrun):
             print("todo")
 
     def sell_order(self, dryrun):
-        print("sell_order: Binance, " + str(self.bid - config['trade']['order_offset_usd']))
+        print("\tsell_order: Binance, " + str(self.bid - config['trader']['order_offset_usd']))
         if(not dryrun):
             print("todo")
 

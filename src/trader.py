@@ -16,8 +16,8 @@ class Trader:
     def __init__(self, *args, **kwargs):
         with open('config.yml', 'r') as yml:
             config = yaml.load(yml)
-            self.upper_limit = config['trader']['upper_limit']
-            self.under_limit = config['trader']['under_limit']
+            self.bf_bn_limit = config['trader']['bf_bn_limit']
+            self.bn_bf_limit = config['trader']['bn_bf_limit']
             self.output_filename = './trade_timing.txt'
 
     def write_trade_timing(self, row):
@@ -34,33 +34,45 @@ class Trader:
         for row in tsv:
             diff = float(row[1])
 
-            if coin_status == CoinStatus.BitFlyer and diff >= self.upper_limit:
+            if coin_status == CoinStatus.BitFlyer and diff >= self.bf_bn_limit:
                 coin_status = CoinStatus.Binance
                 self.write_trade_timing("\t".join(row))
-            elif coin_status == CoinStatus.Binance and diff < self.under_limit:
+            elif coin_status == CoinStatus.Binance and diff < self.bn_bf_limit:
                 coin_status = CoinStatus.BitFlyer
                 self.write_trade_timing("\t".join(row))
 
-    def decision_and_order(self, monitor, buying_exchange_cls, selling_exchange_cls, dryrun):
-        buying_exchange_cls.buy_order(dryrun)
-        selling_exchange_cls.sell_order(dryrun)
+    def decision_and_order(self, monitor, buying_exchange, selling_exchange, diff, dryrun):
+        print(selling_exchange.__class__.__name__ + "->" + buying_exchange.__class__.__name__ + "(diff:" + str(diff) + ")")
+        buying_exchange.buy_order(dryrun)
+        selling_exchange.sell_order(dryrun)
 
     def trade(self, dryrun = True):
         coin_status = CoinStatus.BitFlyer
         mon = Monitor()
-        while True:
-            mon.refresh()
+        # while True:
+        tsv = csv.reader(open("results_BF_BN.txt", "r"), delimiter = '\t')
+        for row in tsv:
+            # mon.refresh()
+            mon.bf_bn_diff = float(row[1])
+            mon.bn_bf_diff = float(row[2])
+            mon.bitflyer.bid = float(row[3])
+            mon.bitflyer.ask = float(row[4])
+            mon.binance.bid = float(row[5])
+            mon.binance.ask = float(row[6])
 
-            if coin_status == CoinStatus.BitFlyer and mon.bf_bn_diff >= self.upper_limit:
+            # skip when invalid value
+            if mon.bitflyer.ask < mon.bitflyer.bid or mon.binance.ask < mon.binance.bid:
+                continue
+
+            if coin_status == CoinStatus.BitFlyer and mon.bf_bn_diff >= self.bf_bn_limit:
                 coin_status = CoinStatus.Binance
-                self.decision_and_order(mon, BitFlyer, Binance, dryrun)
-            elif coin_status == CoinStatus.Binance and mon.bf_bn_diff < self.under_limit:
+                self.decision_and_order(mon, mon.binance, mon.bitflyer, mon.bf_bn_diff, dryrun)
+            elif coin_status == CoinStatus.Binance and mon.bn_bf_diff >= self.bn_bf_limit:
                 coin_status = CoinStatus.BitFlyer
-                self.decision_and_order(mon, Binance, BitFlyer, dryrun)
+                self.decision_and_order(mon, mon.bitflyer, mon.binance, mon.bn_bf_diff, dryrun)
 
-            time.sleep(3)
+            #time.sleep(3)
 
 if __name__ == '__main__':
     trader = Trader()
     trader.trade()
-

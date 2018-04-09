@@ -31,12 +31,81 @@ def fetch_url(req, max_times=100, sleep_sec=10):
             print("URLError:" + str(err.reason) + ":" + req.get_full_url())
             time.sleep(sleep_sec)
 
+
+class Context:
+    @staticmethod
+    def exchange_bitflyer(price, is_to_btc):
+        with open('context.yml', 'r') as yml:
+            context = yaml.load(yml)
+
+        if(is_to_btc):
+            assert not float(context['asset']['bitflyer']['jpy']) == 0.0, "bitflyer jpy is 0"
+            context['asset']['bitflyer']['btc'] = float(context['asset']['bitflyer']['jpy']) / float(price)
+            context['asset']['bitflyer']['jpy'] = 0.0
+        else:
+            assert not float(context['asset']['bitflyer']['btc']) == 0.0, "bitflyer btc is 0"
+            context['asset']['bitflyer']['jpy'] = float(context['asset']['bitflyer']['btc']) * price
+            context['asset']['bitflyer']['btc'] = 0.0
+
+        with open('context.yml', 'w') as yml:
+            yml.write(yaml.dump(context, default_flow_style=False))
+
+    @staticmethod
+    def get_bitflyer_btc():
+        with open('context.yml', 'r') as yml:
+            context = yaml.load(yml)
+        return float(context['asset']['bitflyer']['btc'])
+
+    @staticmethod
+    def get_bitflyer_jpy():
+        with open('context.yml', 'r') as yml:
+            context = yaml.load(yml)
+        return float(context['asset']['bitflyer']['jpy'])
+
+    @staticmethod
+    def exchange_binance(price, is_to_btc):
+        with open('context.yml', 'r') as yml:
+            context = yaml.load(yml)
+
+        if(is_to_btc):
+            assert not float(context['asset']['binance']['usd']) == 0.0, "binance usd is 0"
+            context['asset']['binance']['btc'] = float(context['asset']['binance']['usd']) / float(price)
+            context['asset']['binance']['usd'] = 0.0
+        else:
+            assert not float(context['asset']['binance']['btc']) == 0.0, "binance btc is 0"
+            context['asset']['binance']['usd'] = float(context['asset']['binance']['usd']) * price
+            context['asset']['binance']['btc'] = 0.0
+
+        with open('context.yml', 'w') as yml:
+            yml.write(yaml.dump(context, default_flow_style=False))
+
+    @staticmethod
+    def get_binance_btc():
+        with open('context.yml', 'r') as yml:
+            context = yaml.load(yml)
+        return float(context['asset']['binance']['btc'])
+
+    @staticmethod
+    def get_binance_usd():
+        with open('context.yml', 'r') as yml:
+            context = yaml.load(yml)
+        return float(context['asset']['binance']['usd'])
+
+
 class BitFlyer:
     __api_endpoint = 'https://api.bitflyer.jp'
     @staticmethod
-    def __urlopen(method, path, *, param={}):
+    def __urlopen(method, path, *, param=None, data={}):
+        paramtext = ""
+        body = ""
+        if method == "POST":
+            body = json.dumps(data)
+        else:
+            if(param):
+                paramtext = "?" + urllib.parse.urlencode(param)
+
         timestamp = str(time.time())
-        text = timestamp + method + path
+        text = timestamp + method + path + body
         sign = hmac.new(bytes(bitflyer_api_secret.encode('ascii')), bytes(text.encode('ascii')), hashlib.sha256).hexdigest()
 
         headers = {
@@ -46,7 +115,7 @@ class BitFlyer:
             'ACCESS-SIGN': sign,
             'Content-Type': 'application/json'
         }
-        req = urllib.request.Request(url=BitFlyer.__api_endpoint + path + "?" + urllib.parse.urlencode(param), headers=headers)
+        req = urllib.request.Request(url=BitFlyer.__api_endpoint + path + paramtext, data=json.dumps(data).encode("utf-8"), headers=headers)
         return fetch_url(req)
 
     @staticmethod
@@ -66,24 +135,37 @@ class BitFlyer:
 
     def buy_order(self, dryrun):
         print("\tbuy_order: BitFlyer, " + str(self.ask + config['trader']['order_offset_jpy']))
+        price = self.ask
         if(not dryrun):
             param = {
                 "product_code": "BTC_JPY",
                 "child_order_type": "LIMIT",
                 "side": "BUY",
-                "price": self.ask,
-                "size": 0.1,
-                "minute_to_expire": 10000,
-                "time_in_force": "GTC"
+                "price": price,
+                "size": Context.get_bitflyer_btc()
             }
-            with BitFlyer.__urlopen("POST", "/v1/me/sendparentorder", param = param) as res:
+            with BitFlyer.__urlopen("POST", "/v1/me/sendchildorder", param = param) as res:
                 html = res.read().decode("utf-8")
                 print(json.loads(html))
+        Context.exchange_bitflyer(price, True)
 
     def sell_order(self, dryrun):
         print("\tsell_order: BitFlyer, " + str(self.bid - config['trader']['order_offset_jpy']))
+        price = self.ask
         if(not dryrun):
-            print("todo")
+            body = {
+                "product_code": "BTC_JPY",
+                "child_order_type": "LIMIT",
+                "side": "SELL",
+                #"price": price,
+                #"size": Context.get_bitflyer_jpy() / float(price)
+                "price": 1000000,
+                "size": 0.1
+            }
+            with BitFlyer.__urlopen("POST", "/v1/me/sendchildorder", data = body) as res:
+                html = res.read().decode("utf-8")
+                print(json.loads(html))
+        Context.exchange_bitflyer(price, False)
 
 
 class CoinCheck:
@@ -127,13 +209,17 @@ class Binance:
 
     def buy_order(self, dryrun):
         print("\tbuy_order: Binance, " + str(self.ask + config['trader']['order_offset_usd']))
+        price = self.ask
         if(not dryrun):
             print("todo")
+        Context.exchange_binance(price, True)
 
     def sell_order(self, dryrun):
         print("\tsell_order: Binance, " + str(self.bid - config['trader']['order_offset_usd']))
+        price = self.ask
         if(not dryrun):
             print("todo")
+        Context.exchange_binance(price, False)
 
 
 class LegalTender:

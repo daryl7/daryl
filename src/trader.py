@@ -24,24 +24,8 @@ class Trader:
         with open(self.output_filename, mode = 'a', encoding = 'utf-8') as fh:
             fh.write(row + '\n')
 
-    def inspect_backtradelog(self):
-        tsv = csv.reader(open("results_BF_BN.txt", "r"), delimiter = '\t')
-        if os.path.exists(self.output_filename):
-            os.remove(self.output_filename)
-
-        coin_status = CoinStatus.BitFlyer
-        for row in tsv:
-            diff = float(row[1])
-
-            if coin_status == CoinStatus.BitFlyer and diff >= self.bf_bn_limit:
-                coin_status = CoinStatus.Binance
-                self.write_trade_timing("\t".join(row))
-            elif coin_status == CoinStatus.Binance and diff < self.bn_bf_limit:
-                coin_status = CoinStatus.BitFlyer
-                self.write_trade_timing("\t".join(row))
-
     def decision_and_order(self, monitor, buying_exchange, selling_exchange, diff, dryrun):
-        print(selling_exchange.__class__.__name__ + "->" + buying_exchange.__class__.__name__ + "(diff:" + str(diff) + ")")
+        print(selling_exchange.__class__.__name__ + "->" + buying_exchange.__class__.__name__ + "(" + monitor.dt + ", diff:" + str(diff) + ")")
         buying_exchange.buy_order(dryrun)
         selling_exchange.sell_order(dryrun)
 
@@ -55,6 +39,7 @@ class Trader:
         tsv = csv.reader(open("results_BF_BN.txt", "r"), delimiter = '\t')
         for row in tsv:
             # mon.refresh()
+            mon.dt = str(row[0])
             mon.bf_bn_diff = float(row[1])
             mon.bn_bf_diff = float(row[2])
             mon.bitflyer.bid = float(row[3])

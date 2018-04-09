@@ -135,7 +135,7 @@ class BitFlyer:
 
     def buy_order(self, dryrun):
         print("\tbuy_order: BitFlyer, " + str(self.ask + config['trader']['order_offset_jpy']))
-        price = self.ask
+        price = self.ask + config['trader']['order_offset_jpy']
         if(not dryrun):
             param = {
                 "product_code": "BTC_JPY",
@@ -151,12 +151,13 @@ class BitFlyer:
 
     def sell_order(self, dryrun):
         print("\tsell_order: BitFlyer, " + str(self.bid - config['trader']['order_offset_jpy']))
-        price = self.ask
+        price = self.bid - config['trader']['order_offset_jpy']
         if(not dryrun):
             body = {
                 "product_code": "BTC_JPY",
                 "child_order_type": "LIMIT",
                 "side": "SELL",
+                # todo
                 #"price": price,
                 #"size": Context.get_bitflyer_jpy() / float(price)
                 "price": 1000000,

@@ -193,7 +193,7 @@ class Binance:
     __api_endpoint = "https://api.binance.com"
 
     @staticmethod
-    def __urlopen(method, path, *, param={}):
+    def __urlopen_public(method, path, *, param={}):
         timestamp = str(time.time())
         headers = {
             'ACCESS-TIMESTAMP': timestamp,
@@ -203,7 +203,7 @@ class Binance:
         return fetch_url(req)
 
     def refresh_ticker(self):
-        with Binance.__urlopen("GET", "/api/v3/ticker/bookTicker", param = {"symbol":"BTCUSDT"}) as res:
+        with Binance.__urlopen_public("GET", "/api/v3/ticker/bookTicker", param = {"symbol":"BTCUSDT"}) as res:
             html = res.read().decode("utf-8")
             self.bid = float(json.loads(html)["bidPrice"])
             self.ask = float(json.loads(html)["askPrice"])
@@ -217,7 +217,7 @@ class Binance:
 
     def sell_order(self, dryrun):
         print("\tsell_order: Binance, " + str(self.bid - config['trader']['order_offset_usd']))
-        price = self.bid - config['trader']['order_offset_usd'])
+        price = self.bid - config['trader']['order_offset_usd']
         if(not dryrun):
             print("todo")
         Context.exchange_binance(price, False)

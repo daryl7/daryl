@@ -137,14 +137,14 @@ class BitFlyer:
         print("\tbuy_order: BitFlyer, " + str(self.ask + config['trader']['order_offset_jpy']))
         price = self.ask + config['trader']['order_offset_jpy']
         if(not dryrun):
-            param = {
+            body = {
                 "product_code": "BTC_JPY",
                 "child_order_type": "LIMIT",
                 "side": "BUY",
                 "price": price,
                 "size": Context.get_bitflyer_btc()
             }
-            with BitFlyer.__urlopen("POST", "/v1/me/sendchildorder", param = param) as res:
+            with BitFlyer.__urlopen("POST", "/v1/me/sendchildorder", data = body) as res:
                 html = res.read().decode("utf-8")
                 print(json.loads(html))
         Context.exchange_bitflyer(price, True)

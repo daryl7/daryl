@@ -73,7 +73,7 @@ class Context:
             context['asset']['binance']['usd'] = 0.0
         else:
             assert not float(context['asset']['binance']['btc']) == 0.0, "binance btc is 0"
-            context['asset']['binance']['usd'] = float(context['asset']['binance']['usd']) * price
+            context['asset']['binance']['usd'] = float(context['asset']['binance']['btc']) * price
             context['asset']['binance']['btc'] = 0.0
 
         with open('context.yml', 'w') as yml:

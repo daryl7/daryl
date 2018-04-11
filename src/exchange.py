@@ -35,6 +35,14 @@ def fetch_url(req, max_times=100, sleep_sec=10):
 
 class Context:
     @staticmethod
+    def set_coin_status(coin_status):
+        with open('context.yml', 'r') as yml:
+            context = yaml.load(yml)
+        context['coin_status'] = coin_status
+        with open('context.yml', 'w') as yml:
+            yml.write(yaml.dump(context, default_flow_style=False))
+
+    @staticmethod
     def exchange_bitflyer(price, is_to_btc):
         with open('context.yml', 'r') as yml:
             context = yaml.load(yml)
@@ -135,7 +143,6 @@ class BitFlyer:
             self.ask = int(json.loads(html)["best_ask"])
 
     def buy_order(self, dryrun):
-        print("\tbuy_order: BitFlyer, " + str(self.ask + config['trader']['order_offset_jpy']))
         price = self.ask + config['trader']['order_offset_jpy']
         if(not dryrun):
             body = {
@@ -149,9 +156,9 @@ class BitFlyer:
                 html = res.read().decode("utf-8")
                 print(json.loads(html))
         Context.exchange_bitflyer(price, True)
+        return "\tbuy_order: BitFlyer, " + str(self.ask + config['trader']['order_offset_jpy'])
 
     def sell_order(self, dryrun):
-        print("\tsell_order: BitFlyer, " + str(self.bid - config['trader']['order_offset_jpy']))
         price = self.bid - config['trader']['order_offset_jpy']
         if(not dryrun):
             body = {
@@ -168,6 +175,7 @@ class BitFlyer:
                 html = res.read().decode("utf-8")
                 print(json.loads(html))
         Context.exchange_bitflyer(price, False)
+        return "\tsell_order: BitFlyer, " + str(self.bid - config['trader']['order_offset_jpy'])
 
 
 class CoinCheck:
@@ -213,7 +221,6 @@ class Binance:
             self.ask = float(json.loads(html)["askPrice"])
 
     def buy_order(self, dryrun):
-        print("\tbuy_order: Binance, " + str(self.ask + config['trader']['order_offset_usd']))
         price = self.ask + config['trader']['order_offset_usd']
         if(not dryrun):
             order = self.client.create_test_order(
@@ -226,9 +233,9 @@ class Binance:
                 #quantity = Context.get_binance_usd() / float(price),
                 #price = price )
         Context.exchange_binance(price, True)
+        return "\tbuy_order: Binance, " + str(self.ask + config['trader']['order_offset_usd'])
 
     def sell_order(self, dryrun):
-        print("\tsell_order: Binance, " + str(self.bid - config['trader']['order_offset_usd']))
         price = self.bid - config['trader']['order_offset_usd']
         if(not dryrun):
             order = self.client.create_test_order(
@@ -241,6 +248,7 @@ class Binance:
                 #quantity = Context.get_binance_btc(),
                 #price = price )
         Context.exchange_binance(price, False)
+        return "\tsell_order: Binance, " + str(self.bid - config['trader']['order_offset_usd'])
 
 
 class LegalTender:

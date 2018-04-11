@@ -5,7 +5,9 @@ import yaml
 import monitor
 from enum import IntEnum, auto
 from monitor import Monitor
-from exchange import BitFlyer, Binance
+from exchange import BitFlyer, Binance, Context
+import smtplib
+from email.mime.text import MIMEText
 
 class CoinStatus(IntEnum):
     BitFlyer = auto()
@@ -25,9 +27,27 @@ class Trader:
             fh.write(row + '\n')
 
     def decision_and_order(self, monitor, buying_exchange, selling_exchange, diff, dryrun):
-        print(selling_exchange.__class__.__name__ + "->" + buying_exchange.__class__.__name__ + "(" + monitor.dt + ", diff:" + str(diff) + ")")
-        buying_exchange.buy_order(dryrun)
-        selling_exchange.sell_order(dryrun)
+        message1 = selling_exchange.__class__.__name__ + "->" + buying_exchange.__class__.__name__ + "(" + monitor.dt + ", diff:" + str(diff) + ")"
+        message2 = buying_exchange.buy_order(dryrun)
+        message3 = selling_exchange.sell_order(dryrun)
+        print(message1)
+        print(message2)
+        print(message3)
+        Context.set_coin_status(buying_exchange.__class__.__name__)
+
+        with open('config.yml', 'r') as yml:
+           config = yaml.load(yml)
+        you = config['notifycation']['email']['to']
+        me = config['notifycation']['email']['from']
+        msg = MIMEText(message1 + "\n" + message2 + "\n" + message3)
+        msg['Subject'] = config['notifycation']['email']['subject']
+        msg['To'] = you
+        msg['From'] = me
+        s = smtplib.SMTP()
+        s.connect()
+        s.sendmail(me, [you], msg.as_string())
+        s.close()
+
 
     def trade(self, dryrun = True):
         if os.path.exists(self.output_filename):

@@ -6,6 +6,7 @@ import urllib.request
 import sys
 import datetime
 import yaml
+import binance.client
 
 with open('config.yml', 'r') as yml:
     config = yaml.load(yml)
@@ -142,7 +143,7 @@ class BitFlyer:
                 "child_order_type": "LIMIT",
                 "side": "BUY",
                 "price": price,
-                "size": Context.get_bitflyer_btc()
+                "size": Context.get_bitflyer_jpy() / float(price)
             }
             with BitFlyer.__urlopen("POST", "/v1/me/sendchildorder", data = body) as res:
                 html = res.read().decode("utf-8")
@@ -159,7 +160,7 @@ class BitFlyer:
                 "side": "SELL",
                 # todo
                 #"price": price,
-                #"size": Context.get_bitflyer_jpy() / float(price)
+                #"size": Context.get_bitflyer_btc()
                 "price": 1000000,
                 "size": 0.1
             }
@@ -192,6 +193,9 @@ class CoinCheck:
 class Binance:
     __api_endpoint = "https://api.binance.com"
 
+    def __init__(self, *args, **kwargs):
+        self.client = binance.client.Client(config['binance']['api_key'], config['binance']['api_secret'])
+
     @staticmethod
     def __urlopen_public(method, path, *, param={}):
         timestamp = str(time.time())
@@ -212,14 +216,30 @@ class Binance:
         print("\tbuy_order: Binance, " + str(self.ask + config['trader']['order_offset_usd']))
         price = self.ask + config['trader']['order_offset_usd']
         if(not dryrun):
-            print("todo")
+            order = self.client.create_test_order(
+                symbol = 'BTCUSDT',
+                side = binance.client.Client.SIDE_BUY,
+                type = binance.client.Client.ORDER_TYPE_LIMIT,
+                timeInForce = binance.client.Client.TIME_IN_FORCE_GTC,
+                quantity = 0.01,
+                price = 5000 )
+                #quantity = Context.get_binance_usd() / float(price),
+                #price = price )
         Context.exchange_binance(price, True)
 
     def sell_order(self, dryrun):
         print("\tsell_order: Binance, " + str(self.bid - config['trader']['order_offset_usd']))
         price = self.bid - config['trader']['order_offset_usd']
         if(not dryrun):
-            print("todo")
+            order = self.client.create_test_order(
+                symbol = 'BTCUSDT',
+                side = binance.client.Client.SIDE_SELL,
+                type = binance.client.Client.ORDER_TYPE_LIMIT,
+                timeInForce = binance.client.Client.TIME_IN_FORCE_GTC,
+                quantity = 0.01,
+                price = 10000 )
+                #quantity = Context.get_binance_btc(),
+                #price = price )
         Context.exchange_binance(price, False)
 
 

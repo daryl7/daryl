@@ -56,17 +56,17 @@ class Trader:
 
         coin_status = CoinStatus.BitFlyer if Context.get_coin_status() == "BitFlyer" else CoinStatus.Binance
         mon = Monitor()
-        # while True:
-        tsv = csv.reader(open("results_BF_BN.txt", "r"), delimiter = '\t')
-        for row in tsv:
-            # mon.refresh()
-            mon.dt = str(row[0])
-            mon.bf_bn_diff = float(row[1])
-            mon.bn_bf_diff = float(row[2])
-            mon.bitflyer.bid = float(row[3])
-            mon.bitflyer.ask = float(row[4])
-            mon.binance.bid = float(row[5])
-            mon.binance.ask = float(row[6])
+        while True:
+        #tsv = csv.reader(open("results_BF_BN.txt", "r"), delimiter = '\t')
+        #for row in tsv:
+            mon.refresh()
+            #mon.dt = str(row[0])
+            #mon.bf_bn_diff = float(row[1])
+            #mon.bn_bf_diff = float(row[2])
+            #mon.bitflyer.bid = float(row[3])
+            #mon.bitflyer.ask = float(row[4])
+            #mon.binance.bid = float(row[5])
+            #mon.binance.ask = float(row[6])
 
             # skip when invalid value
             if mon.bitflyer.ask < mon.bitflyer.bid or mon.binance.ask < mon.binance.bid:
@@ -81,8 +81,8 @@ class Trader:
                 self.decision_and_order(mon, mon.bitflyer, mon.binance, mon.bn_bf_diff, dryrun)
                 self.write_trade_timing("\t".join(row))
 
-            #time.sleep(3)
+            time.sleep(3)
 
 if __name__ == '__main__':
     trader = Trader()
-    trader.trade()
+    trader.trade(False)

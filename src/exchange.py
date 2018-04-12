@@ -162,7 +162,7 @@ class BitFlyer:
                 html = res.read().decode("utf-8")
                 print(json.loads(html))
         Context.exchange_bitflyer(price, True)
-        return "\tbuy_order: BitFlyer, " + str(self.ask + config['trader']['order_offset_jpy'])
+        return "\tbuy_order: BitFlyer, " + str(price)
 
     def sell_order(self, dryrun):
         price = self.bid - config['trader']['order_offset_jpy']
@@ -171,17 +171,14 @@ class BitFlyer:
                 "product_code": "BTC_JPY",
                 "child_order_type": "LIMIT",
                 "side": "SELL",
-                # todo
-                #"price": price,
-                #"size": Context.get_bitflyer_btc()
-                "price": 1000000,
-                "size": 0.1
+                "price": price,
+                "size": Context.get_bitflyer_btc()
             }
             with BitFlyer.__urlopen("POST", "/v1/me/sendchildorder", data = body) as res:
                 html = res.read().decode("utf-8")
                 print(json.loads(html))
         Context.exchange_bitflyer(price, False)
-        return "\tsell_order: BitFlyer, " + str(self.bid - config['trader']['order_offset_jpy'])
+        return "\tsell_order: BitFlyer, " + str(price)
 
 
 class CoinCheck:
@@ -234,12 +231,10 @@ class Binance:
                 side = binance.client.Client.SIDE_BUY,
                 type = binance.client.Client.ORDER_TYPE_LIMIT,
                 timeInForce = binance.client.Client.TIME_IN_FORCE_GTC,
-                quantity = 0.01,
-                price = 5000 )
-                #quantity = Context.get_binance_usd() / float(price),
-                #price = price )
+                quantity = Context.get_binance_usd() / float(price),
+                price = price )
         Context.exchange_binance(price, True)
-        return "\tbuy_order: Binance, " + str(self.ask + config['trader']['order_offset_usd'])
+        return "\tbuy_order: Binance, " + str(price)
 
     def sell_order(self, dryrun):
         price = self.bid - config['trader']['order_offset_usd']
@@ -249,12 +244,10 @@ class Binance:
                 side = binance.client.Client.SIDE_SELL,
                 type = binance.client.Client.ORDER_TYPE_LIMIT,
                 timeInForce = binance.client.Client.TIME_IN_FORCE_GTC,
-                quantity = 0.01,
-                price = 10000 )
-                #quantity = Context.get_binance_btc(),
-                #price = price )
+                quantity = Context.get_binance_btc(),
+                price = price )
         Context.exchange_binance(price, False)
-        return "\tsell_order: Binance, " + str(self.bid - config['trader']['order_offset_usd'])
+        return "\tsell_order: Binance, " + str(price)
 
 
 class LegalTender:
@@ -270,9 +263,3 @@ class LegalTender:
             html = res.read().decode("utf-8")
             v = float(json.loads(html)['quotes'][20]['ask'])
         return v
-
-# with BitFlyer.urlopen("GET", "/v1/me/getpermissions") as res:
-#     html = res.read().decode("utf-8")
-#     open("permissions.json","w").write(html)
-#     print(json.loads(html))
-# sys.exit()

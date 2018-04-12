@@ -37,23 +37,24 @@ class Trader:
 
         with open('config.yml', 'r') as yml:
            config = yaml.load(yml)
-        you = config['notifycation']['email']['to']
-        me = config['notifycation']['email']['from']
-        msg = MIMEText(message1 + "\n" + message2 + "\n" + message3)
-        msg['Subject'] = config['notifycation']['email']['subject']
-        msg['To'] = you
-        msg['From'] = me
-        s = smtplib.SMTP()
-        s.connect()
-        s.sendmail(me, [you], msg.as_string())
-        s.close()
+        if not config['notifycation']['email']['to'] == "":
+            you = config['notifycation']['email']['to']
+            me = config['notifycation']['email']['from']
+            msg = MIMEText(message1 + "\n" + message2 + "\n" + message3)
+            msg['Subject'] = config['notifycation']['email']['subject']
+            msg['To'] = you
+            msg['From'] = me
+            s = smtplib.SMTP()
+            s.connect()
+            s.sendmail(me, [you], msg.as_string())
+            s.close()
 
 
     def trade(self, dryrun = True):
         if os.path.exists(self.output_filename):
             os.remove(self.output_filename)
 
-        coin_status = CoinStatus.BitFlyer
+        coin_status = CoinStatus.BitFlyer if Context.get_coin_status() == "BitFlyer" else CoinStatus.Binance
         mon = Monitor()
         # while True:
         tsv = csv.reader(open("results_BF_BN.txt", "r"), delimiter = '\t')

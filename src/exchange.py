@@ -35,6 +35,12 @@ def fetch_url(req, max_times=100, sleep_sec=10):
 
 class Context:
     @staticmethod
+    def get_coin_status():
+        with open('context.yml', 'r') as yml:
+            context = yaml.load(yml)
+        return context['coin_status']
+
+    @staticmethod
     def set_coin_status(coin_status):
         with open('context.yml', 'r') as yml:
             context = yaml.load(yml)

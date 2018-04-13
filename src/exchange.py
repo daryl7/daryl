@@ -84,7 +84,7 @@ class Context:
 
         if(is_to_btc):
             assert not float(context['asset']['binance']['usd']) == 0.0, "binance usd is 0"
-            context['asset']['binance']['btc'] = round(float(context['asset']['binance']['usd']) / float(price), 8)
+            context['asset']['binance']['btc'] = round(float(context['asset']['binance']['usd']) / float(price), 6)
             context['asset']['binance']['usd'] = 0.0
         else:
             assert not float(context['asset']['binance']['btc']) == 0.0, "binance btc is 0"
@@ -225,29 +225,31 @@ class Binance:
 
     def buy_order(self, dryrun):
         price = self.ask + config['trader']['order_offset_usd']
+        lot = round(Context.get_binance_usd() / float(price), 6)
         if(not dryrun):
             order = self.client.create_order(
                 symbol = 'BTCUSDT',
                 side = binance.client.Client.SIDE_BUY,
                 type = binance.client.Client.ORDER_TYPE_LIMIT,
                 timeInForce = binance.client.Client.TIME_IN_FORCE_GTC,
-                quantity = round(Context.get_binance_usd() / float(price), 8),
+                quantity = lot,
                 price = price )
         Context.exchange_binance(price, True)
-        return "\tbuy_order: Binance, " + str(price)
+        return "\tbuy_order: Binance, " + str(price) + ", " + str(lot)
 
     def sell_order(self, dryrun):
         price = self.bid - config['trader']['order_offset_usd']
+        lot = Context.get_binance_btc()
         if(not dryrun):
             order = self.client.create_order(
                 symbol = 'BTCUSDT',
                 side = binance.client.Client.SIDE_SELL,
                 type = binance.client.Client.ORDER_TYPE_LIMIT,
                 timeInForce = binance.client.Client.TIME_IN_FORCE_GTC,
-                quantity = Context.get_binance_btc(),
+                quantity = lot,
                 price = price )
         Context.exchange_binance(price, False)
-        return "\tsell_order: Binance, " + str(price)
+        return "\tsell_order: Binance, " + str(price) + ", " + str(lot)
 
 
 class LegalTender:

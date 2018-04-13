@@ -77,7 +77,7 @@ class Trader:
             #mon.bitflyer.ask = float(row[4])
             #mon.binance.bid = float(row[5])
             #mon.binance.ask = float(row[6])
-            row = [mon.dt, str(mon.bf_bn_diff), str(mon.bn_bf_diff), str(mon.bitflyer.bid), str(mon.bitflyer.ask), str(mon.binance.bid), str(mon.binance.ask)]
+            row = [mon.dt, str(mon.bf_bn_diff), str(mon.bn_bf_diff), str(mon.bitflyer.bid), str(mon.bitflyer.ask), str(mon.binance.bid), str(mon.binance.ask), str(mon.usdjpy)]
 
             # skip when invalid value
             if mon.bitflyer.ask < mon.bitflyer.bid or mon.binance.ask < mon.binance.bid:

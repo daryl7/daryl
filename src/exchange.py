@@ -55,7 +55,7 @@ class Context:
 
         if(is_to_btc):
             assert not float(context['asset']['bitflyer']['jpy']) == 0.0, "bitflyer jpy is 0"
-            context['asset']['bitflyer']['btc'] = float(context['asset']['bitflyer']['jpy']) / float(price)
+            context['asset']['bitflyer']['btc'] = round(float(context['asset']['bitflyer']['jpy']) / float(price), 8)
             context['asset']['bitflyer']['jpy'] = 0.0
         else:
             assert not float(context['asset']['bitflyer']['btc']) == 0.0, "bitflyer btc is 0"
@@ -84,7 +84,7 @@ class Context:
 
         if(is_to_btc):
             assert not float(context['asset']['binance']['usd']) == 0.0, "binance usd is 0"
-            context['asset']['binance']['btc'] = float(context['asset']['binance']['usd']) / float(price)
+            context['asset']['binance']['btc'] = round(float(context['asset']['binance']['usd']) / float(price), 8)
             context['asset']['binance']['usd'] = 0.0
         else:
             assert not float(context['asset']['binance']['btc']) == 0.0, "binance btc is 0"
@@ -156,7 +156,7 @@ class BitFlyer:
                 "child_order_type": "LIMIT",
                 "side": "BUY",
                 "price": price,
-                "size": Context.get_bitflyer_jpy() / float(price)
+                "size": round(Context.get_bitflyer_jpy() / float(price), 8)
             }
             with BitFlyer.__urlopen("POST", "/v1/me/sendchildorder", data = body) as res:
                 html = res.read().decode("utf-8")
@@ -226,12 +226,12 @@ class Binance:
     def buy_order(self, dryrun):
         price = self.ask + config['trader']['order_offset_usd']
         if(not dryrun):
-            order = self.client.create_test_order(
+            order = self.client.create_order(
                 symbol = 'BTCUSDT',
                 side = binance.client.Client.SIDE_BUY,
                 type = binance.client.Client.ORDER_TYPE_LIMIT,
                 timeInForce = binance.client.Client.TIME_IN_FORCE_GTC,
-                quantity = Context.get_binance_usd() / float(price),
+                quantity = round(Context.get_binance_usd() / float(price), 8),
                 price = price )
         Context.exchange_binance(price, True)
         return "\tbuy_order: Binance, " + str(price)
@@ -239,7 +239,7 @@ class Binance:
     def sell_order(self, dryrun):
         price = self.bid - config['trader']['order_offset_usd']
         if(not dryrun):
-            order = self.client.create_test_order(
+            order = self.client.create_order(
                 symbol = 'BTCUSDT',
                 side = binance.client.Client.SIDE_SELL,
                 type = binance.client.Client.ORDER_TYPE_LIMIT,

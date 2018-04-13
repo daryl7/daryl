@@ -21,9 +21,15 @@ class Trader:
             self.bf_bn_limit = config['trader']['bf_bn_limit']
             self.bn_bf_limit = config['trader']['bn_bf_limit']
             self.output_filename = './trade_timing.txt'
+            self.trade_log_full_filepath = './log/trade_full.log'
+            self.trade_log_filepath = './log/trade.log'
 
     def write_trade_timing(self, row):
         with open(self.output_filename, mode = 'a', encoding = 'utf-8') as fh:
+            fh.write(row + '\n')
+        with open(self.trade_log_full_filepath, mode = 'a', encoding = 'utf-8') as fh:
+            fh.write(row + '\n')
+        with open(self.trade_log_filepath, mode = 'a', encoding = 'utf-8') as fh:
             fh.write(row + '\n')
 
     def decision_and_order(self, monitor, buying_exchange, selling_exchange, diff, dryrun):
@@ -33,6 +39,10 @@ class Trader:
         print(message1)
         print(message2)
         print(message3)
+        with open(self.trade_log_full_filepath, mode = 'a', encoding = 'utf-8') as fh:
+            fh.write(message1 + '\n')
+            fh.write(message2 + '\n')
+            fh.write(message3 + '\n')
         Context.set_coin_status(buying_exchange.__class__.__name__)
 
         with open('config.yml', 'r') as yml:

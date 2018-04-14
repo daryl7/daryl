@@ -108,7 +108,7 @@ class Trader:
 
 if __name__ == '__main__':
 
-    if len(sys.argv) > 1 and sys.argv[1] in {"ReadTrade", "DemoTrade", "Batch"}:
+    if len(sys.argv) > 1 and sys.argv[1] in {"RealTrade", "DemoTrade", "Batch"}:
         run_mode = sys.argv[1]
     else:
         print("bad argument!")

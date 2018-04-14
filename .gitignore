@@ -1,2 +1,7 @@
 __pycache__
+.vscode
+*.pyc
 config.yml
+context.yml
+results_BF_BN.txt
+results_BF_CC.txt

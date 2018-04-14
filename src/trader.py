@@ -33,7 +33,7 @@ class Trader:
         with open(self.trade_log_filepath, mode = 'a', encoding = 'utf-8') as fh:
             fh.write(row + '\n')
 
-    def decision_and_order(self, monitor, buying_exchange, selling_exchange, diff, dryrun):
+    def order(self, monitor, buying_exchange, selling_exchange, diff, dryrun):
         message1 = selling_exchange.__class__.__name__ + "->" + buying_exchange.__class__.__name__ + "(" + monitor.dt + ", diff:" + str(diff) + ")"
         message2 = buying_exchange.buy_order(dryrun)
         message3 = selling_exchange.sell_order(dryrun)
@@ -60,6 +60,21 @@ class Trader:
             s.sendmail(me, [you], msg.as_string())
             s.close()
 
+    def decision_and_order(self, coin_status, mon, dryrun):
+        # skip when invalid value
+        if mon.bitflyer.ask < mon.bitflyer.bid or mon.binance.ask < mon.binance.bid:
+            return coin_status
+
+        row = [mon.dt, str(mon.bf_bn_diff), str(mon.bn_bf_diff), str(mon.bitflyer.bid), str(mon.bitflyer.ask), str(mon.binance.bid), str(mon.binance.ask), str(mon.usdjpy)]
+        if coin_status == CoinStatus.BitFlyer and mon.bf_bn_diff >= self.bf_bn_limit:
+            coin_status = CoinStatus.Binance
+            self.order(mon, mon.binance, mon.bitflyer, mon.bf_bn_diff, dryrun)
+            self.write_trade_timing("\t".join(row))
+        elif coin_status == CoinStatus.Binance and mon.bn_bf_diff >= self.bn_bf_limit:
+            coin_status = CoinStatus.BitFlyer
+            self.order(mon, mon.bitflyer, mon.binance, mon.bn_bf_diff, dryrun)
+            self.write_trade_timing("\t".join(row))
+        return coin_status
 
     def trade(self, run_mode):
         if os.path.exists(self.output_filename):
@@ -83,37 +98,12 @@ class Trader:
                 mon.bitflyer.ask = float(row[4])
                 mon.binance.bid = float(row[5])
                 mon.binance.ask = float(row[6])
-
-                # skip when invalid value
-                if mon.bitflyer.ask < mon.bitflyer.bid or mon.binance.ask < mon.binance.bid:
-                    continue
-
-                if coin_status == CoinStatus.BitFlyer and mon.bf_bn_diff >= self.bf_bn_limit:
-                    coin_status = CoinStatus.Binance
-                    self.decision_and_order(mon, mon.binance, mon.bitflyer, mon.bf_bn_diff, dryrun)
-                    self.write_trade_timing("\t".join(row))
-                elif coin_status == CoinStatus.Binance and mon.bn_bf_diff >= self.bn_bf_limit:
-                    coin_status = CoinStatus.BitFlyer
-                    self.decision_and_order(mon, mon.bitflyer, mon.binance, mon.bn_bf_diff, dryrun)
-                    self.write_trade_timing("\t".join(row))
+                mon.usdjpy = float(row[7])
+                coin_status = self.decision_and_order(coin_status, mon, dryrun)
         else:
             while True:
                 mon.refresh()
-                row = [mon.dt, str(mon.bf_bn_diff), str(mon.bn_bf_diff), str(mon.bitflyer.bid), str(mon.bitflyer.ask), str(mon.binance.bid), str(mon.binance.ask), str(mon.usdjpy)]
-
-                # skip when invalid value
-                if mon.bitflyer.ask < mon.bitflyer.bid or mon.binance.ask < mon.binance.bid:
-                    continue
-
-                if coin_status == CoinStatus.BitFlyer and mon.bf_bn_diff >= self.bf_bn_limit:
-                    coin_status = CoinStatus.Binance
-                    self.decision_and_order(mon, mon.binance, mon.bitflyer, mon.bf_bn_diff, dryrun)
-                    self.write_trade_timing("\t".join(row))
-                elif coin_status == CoinStatus.Binance and mon.bn_bf_diff >= self.bn_bf_limit:
-                    coin_status = CoinStatus.BitFlyer
-                    self.decision_and_order(mon, mon.bitflyer, mon.binance, mon.bn_bf_diff, dryrun)
-                    self.write_trade_timing("\t".join(row))
-
+                coin_status = self.decision_and_order(coin_status, mon, dryrun)
                 time.sleep(3)
 
 if __name__ == '__main__':

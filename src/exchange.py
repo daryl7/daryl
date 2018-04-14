@@ -120,7 +120,8 @@ class BitFlyer:
                 paramtext = "?" + urllib.parse.urlencode(param)
 
         timestamp = str(time.time())
-        text = timestamp + method + path + body
+        text = timestamp + method + path + paramtext + body
+        print(text)
         sign = hmac.new(bytes(bitflyer_api_secret.encode('ascii')), bytes(text.encode('ascii')), hashlib.sha256).hexdigest()
 
         headers = {
@@ -130,7 +131,10 @@ class BitFlyer:
             'ACCESS-SIGN': sign,
             'Content-Type': 'application/json'
         }
-        req = urllib.request.Request(url=BitFlyer.__api_endpoint + path + paramtext, data=json.dumps(data).encode("utf-8"), headers=headers)
+        if method == "POST":
+            req = urllib.request.Request(url=BitFlyer.__api_endpoint + path + paramtext, data=json.dumps(data).encode("utf-8"), headers=headers)
+        else:
+            req = urllib.request.Request(url=BitFlyer.__api_endpoint + path + paramtext, headers=headers)
         return fetch_url(req)
 
     @staticmethod
@@ -148,37 +152,66 @@ class BitFlyer:
             self.bid = int(json.loads(html)["best_bid"])
             self.ask = int(json.loads(html)["best_ask"])
 
+    def order(self, body):
+        with BitFlyer.__urlopen("POST", "/v1/me/sendchildorder", data = body) as res:
+            html = res.read().decode("utf-8")
+            print(html)
+            child_order_acceptance_id = json.loads(html)["child_order_acceptance_id"]
+
+        retry_count = 0
+        while True:
+            if retry_count > 3:
+                assert("failed order")
+
+            time.sleep(3)
+            retry_count += 1
+            with BitFlyer.__urlopen("GET", "/v1/me/getchildorders", param = {"child_order_acceptance_id":child_order_acceptance_id}) as res:
+                html = res.read().decode("utf-8")
+                if len(json.loads(html)) > 0:
+                    print(html)
+                    commission = json.loads(html)[0]["total_commission"]
+                    break
+        return [child_order_acceptance_id, commission]
+
     def buy_order(self, dryrun):
         price = self.ask + config['trader']['order_offset_jpy']
-        if(not dryrun):
+        lot = round(Context.get_bitflyer_jpy() / float(price), 8)
+        if not dryrun:
             body = {
                 "product_code": "BTC_JPY",
                 "child_order_type": "LIMIT",
                 "side": "BUY",
                 "price": price,
-                "size": round(Context.get_bitflyer_jpy() / float(price), 8)
+                "size": lot
             }
-            with BitFlyer.__urlopen("POST", "/v1/me/sendchildorder", data = body) as res:
-                html = res.read().decode("utf-8")
-                print(json.loads(html))
+            r = self.order(body)
+            child_order_acceptance_id = r[0]
+            commission = r[1]
+        else:
+            child_order_acceptance_id = "demo"
+            commission = 0
         Context.exchange_bitflyer(price, True)
-        return "\tbuy_order: BitFlyer, " + str(price)
+        return "\tbuy_order:BitFlyer, price:" + str(price) + ", lot:" + str(lot) + ", commission:" + str(commission) + ", child_order_acceptance_id:" + child_order_acceptance_id
 
     def sell_order(self, dryrun):
         price = self.bid - config['trader']['order_offset_jpy']
-        if(not dryrun):
+        lot = Context.get_bitflyer_btc()
+        if not dryrun:
             body = {
                 "product_code": "BTC_JPY",
                 "child_order_type": "LIMIT",
                 "side": "SELL",
                 "price": price,
-                "size": Context.get_bitflyer_btc()
+                "size": lot
             }
-            with BitFlyer.__urlopen("POST", "/v1/me/sendchildorder", data = body) as res:
-                html = res.read().decode("utf-8")
-                print(json.loads(html))
+            r = self.order(body)
+            child_order_acceptance_id = r[0]
+            commission = r[1]
+        else:
+            child_order_acceptance_id = "demo"
+            commission = 0
         Context.exchange_bitflyer(price, False)
-        return "\tsell_order: BitFlyer, " + str(price)
+        return "\tsell_order:BitFlyer, price:" + str(price) + ", lot:" + str(lot) + ", commission:" + str(commission) + ", child_order_acceptance_id:" + child_order_acceptance_id
 
 
 class CoinCheck:

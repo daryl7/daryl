@@ -41,9 +41,7 @@ class Trader:
         print(message2)
         print(message3)
         with open(self.trade_log_full_filepath, mode = 'a', encoding = 'utf-8') as fh:
-            fh.write(message1 + '\n')
-            fh.write(message2 + '\n')
-            fh.write(message3 + '\n')
+            fh.write('\n'.join(["", message1, message2, message3, ""]))
         Context.set_coin_status(buying_exchange.__class__.__name__)
 
         with open('config.yml', 'r') as yml:

@@ -21,17 +21,20 @@ class Trader:
             config = yaml.load(yml)
             self.bf_bn_limit = config['trader']['bf_bn_limit']
             self.bn_bf_limit = config['trader']['bn_bf_limit']
-            self.output_filename = './trade_timing.txt'
+            self.batch_output_filename = './trade_simulation.tsv'
             self.trade_log_full_filepath = './log/trade_full.log'
-            self.trade_log_filepath = './log/trade.log'
+            self.trade_tsv_filepath = './log/trade.tsv'
 
-    def write_trade_timing(self, row):
-        with open(self.output_filename, mode = 'a', encoding = 'utf-8') as fh:
-            fh.write(row + '\n')
-        with open(self.trade_log_full_filepath, mode = 'a', encoding = 'utf-8') as fh:
-            fh.write(row + '\n')
-        with open(self.trade_log_filepath, mode = 'a', encoding = 'utf-8') as fh:
-            fh.write(row + '\n')
+    def trade_log(self, row):
+        record = "\t".join(row)
+        files = [
+            self.batch_output_filename,
+            self.trade_log_full_filepath,
+            self.trade_tsv_filepath
+        ]
+        for file in files:
+            with open(file, mode = 'a', encoding = 'utf-8') as fh:
+                fh.write(record + '\n')
 
     def order(self, monitor, buying_exchange, selling_exchange, diff, dryrun):
         message1 = selling_exchange.__class__.__name__ + "->" + buying_exchange.__class__.__name__ + "(" + monitor.dt + ", diff:" + str(diff) + ")"
@@ -67,16 +70,16 @@ class Trader:
         if coin_status == CoinStatus.BitFlyer and mon.bf_bn_diff >= self.bf_bn_limit:
             coin_status = CoinStatus.Binance
             self.order(mon, mon.binance, mon.bitflyer, mon.bf_bn_diff, dryrun)
-            self.write_trade_timing("\t".join(row))
+            self.trade_log(row)
         elif coin_status == CoinStatus.Binance and mon.bn_bf_diff >= self.bn_bf_limit:
             coin_status = CoinStatus.BitFlyer
             self.order(mon, mon.bitflyer, mon.binance, mon.bn_bf_diff, dryrun)
-            self.write_trade_timing("\t".join(row))
+            self.trade_log(row)
         return coin_status
 
     def trade(self, run_mode):
-        if os.path.exists(self.output_filename):
-            os.remove(self.output_filename)
+        if os.path.exists(self.batch_output_filename):
+            os.remove(self.batch_output_filename)
 
         if run_mode == "RealTrade":
             dryrun = False

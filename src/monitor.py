@@ -1,11 +1,21 @@
 from exchange import BitFlyer, CoinCheck, Binance, LegalTender
 import datetime
 import time
+import os
 
 class Monitor:
-    def __init__(self, *args, **kwargs):
+    def __init__(self, log_dir = "./log"):
         self.bitflyer = BitFlyer()
         self.binance = Binance()
+        self.log_dir = log_dir
+
+    def __prepare_log_filepath(self, name):
+        date = datetime.datetime.now().strftime("%Y-%m-%d")
+        filepath = self.log_dir + "/" + name + "_" + date + ".tsv"
+        dir = os.path.dirname(filepath)
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        return filepath
 
     def refresh(self):
         self.dt = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -24,7 +34,7 @@ class Monitor:
         self.cc_bf_diff = cc_bid - bf_ask
         res = '\t'.join([self.dt, str(self.bf_cc_diff), str(self.cc_bf_diff), str(bf_bid), str(bf_ask), str(cc_bid), str(cc_ask)])
         # print(res)
-        with open('results_BF_CC.txt', mode = 'a', encoding = 'utf-8') as fh:
+        with open(self.__prepare_log_filepath('monitor_BTCJPY_BF_CC/monitor_BTCJPY_BF_CC'), mode = 'a', encoding = 'utf-8') as fh:
             fh.write(res + '\n')
 
         self.usdjpy = LegalTender.get_rate_of_usdjpy()
@@ -39,7 +49,7 @@ class Monitor:
         self.bn_bf_diff = bn_bid_jpy - bf_ask
         res = '\t'.join([self.dt, str(self.bf_bn_diff), str(self.bn_bf_diff), str(bf_bid), str(bf_ask), str(bn_bid_usd), str(bn_ask_usd), str(self.usdjpy)])
         print(res)
-        with open('results_BF_BN.txt', mode = 'a', encoding = 'utf-8') as fh:
+        with open(self.__prepare_log_filepath('monitor_BTCJPY_BF_BN/monitor_BTCJPY_BF_BN'), mode = 'a', encoding = 'utf-8') as fh:
             fh.write(res + '\n')
 
 def monitor_test_mode():

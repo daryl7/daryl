@@ -7,6 +7,7 @@ import sys
 import datetime
 import yaml
 import binance.client
+import applog
 
 with open('config.yml', 'r') as yml:
     config = yaml.load(yml)
@@ -18,18 +19,18 @@ def fetch_url(req, max_times=100, sleep_sec=10):
     retry_count = 0
     while True:
         if retry_count > max_times:
-            print("fetch_url error")
+            applog.applog_error("fetch_url error")
             break
 
         try:
             retry_count += 1
             return urllib.request.urlopen(req)
         except urllib.error.HTTPError as err:
-            print("HTTPError:" + str(err.code) + ":" + req.get_full_url())
+            applog.applog_warning("HTTPError(retry):" + str(err.code) + ":" + req.get_full_url())
             time.sleep(sleep_sec)
 
         except urllib.error.URLError as err:
-            print("URLError:" + str(err.reason) + ":" + req.get_full_url())
+            applog.applog_warning("URLError(retry):" + str(err.reason) + ":" + req.get_full_url())
             time.sleep(sleep_sec)
 
 
@@ -121,7 +122,7 @@ class BitFlyer:
 
         timestamp = str(time.time())
         text = timestamp + method + path + paramtext + body
-        print(text)
+        applog.applog_info(text)
         sign = hmac.new(bytes(bitflyer_api_secret.encode('ascii')), bytes(text.encode('ascii')), hashlib.sha256).hexdigest()
 
         headers = {
@@ -155,7 +156,7 @@ class BitFlyer:
     def order(self, body):
         with BitFlyer.__urlopen("POST", "/v1/me/sendchildorder", data = body) as res:
             html = res.read().decode("utf-8")
-            print(html)
+            applog.applog_info(html)
             child_order_acceptance_id = json.loads(html)["child_order_acceptance_id"]
 
         retry_count = 0
@@ -168,7 +169,7 @@ class BitFlyer:
             with BitFlyer.__urlopen("GET", "/v1/me/getchildorders", param = {"child_order_acceptance_id":child_order_acceptance_id}) as res:
                 html = res.read().decode("utf-8")
                 if len(json.loads(html)) > 0:
-                    print(html)
+                    applog.applog_info(html)
                     commission = json.loads(html)[0]["total_commission"]
                     break
         return [child_order_acceptance_id, commission]

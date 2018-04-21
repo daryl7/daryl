@@ -9,6 +9,7 @@ from exchange import BitFlyer, Binance, Context
 import smtplib
 from email.mime.text import MIMEText
 import sys
+import applog
 
 class CoinStatus(IntEnum):
     BitFlyer = auto()
@@ -68,9 +69,9 @@ class Trader:
         message1 = selling_exchange.__class__.__name__ + "->" + buying_exchange.__class__.__name__ + "(" + monitor.dt + ", diff:" + str(diff) + ")"
         message2 = buying_exchange.buy_order(dryrun)
         message3 = selling_exchange.sell_order(dryrun)
-        print(message1)
-        print(message2)
-        print(message3)
+        applog.applog_info(message1)
+        applog.applog_info(message2)
+        applog.applog_info(message3)
         with open(self.trade_log_full_filepath, mode = 'a', encoding = 'utf-8') as fh:
             fh.write('\n'.join(["", message1, message2, message3, ""]))
         Context.set_coin_status(buying_exchange.__class__.__name__)
@@ -100,7 +101,7 @@ class Trader:
 
         if self.is_email_notification():
             if not self.checkmailer():
-                print("mailer not activation!")
+                applog.applog_error("mailer not activation!")
                 sys.exit()
 
         if run_mode == "RealTrade":
@@ -134,7 +135,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] in {"RealTrade", "DemoTrade", "Batch"}:
         run_mode = sys.argv[1]
     else:
-        print("bad argument!")
+        applog.applog_error("bad argument!")
         sys.exit()
 
     trader = Trader()

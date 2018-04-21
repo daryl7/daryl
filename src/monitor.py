@@ -33,7 +33,6 @@ class Monitor:
         self.bf_cc_diff = bf_bid - cc_ask
         self.cc_bf_diff = cc_bid - bf_ask
         res = '\t'.join([self.dt, str(self.bf_cc_diff), str(self.cc_bf_diff), str(bf_bid), str(bf_ask), str(cc_bid), str(cc_ask)])
-        # print(res)
         with open(self.__prepare_log_filepath('monitor_BTCJPY_BF_CC/monitor_BTCJPY_BF_CC'), mode = 'a', encoding = 'utf-8') as fh:
             fh.write(res + '\n')
 

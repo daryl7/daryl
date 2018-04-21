@@ -36,6 +36,34 @@ class Trader:
             with open(file, mode = 'a', encoding = 'utf-8') as fh:
                 fh.write(record + '\n')
 
+    def is_email_notification(self):
+        with open('config.yml', 'r') as yml:
+           config = yaml.load(yml)
+        return not config['notifycation']['email']['to'] == ""
+
+    def sendmail(self, message):
+        with open('config.yml', 'r') as yml:
+           config = yaml.load(yml)
+        you = config['notifycation']['email']['to']
+        me = config['notifycation']['email']['from']
+        msg = MIMEText(message)
+        msg['Subject'] = config['notifycation']['email']['subject']
+        msg['To'] = you
+        msg['From'] = me
+        s = smtplib.SMTP()
+        s.connect()
+        s.sendmail(me, [you], msg.as_string())
+        s.close()
+
+    def checkmailer(self):
+        s = smtplib.SMTP()
+        try:
+            s.connect()
+            s.close()
+        except ConnectionRefusedError:
+            return False
+        return True
+
     def order(self, monitor, buying_exchange, selling_exchange, diff, dryrun):
         message1 = selling_exchange.__class__.__name__ + "->" + buying_exchange.__class__.__name__ + "(" + monitor.dt + ", diff:" + str(diff) + ")"
         message2 = buying_exchange.buy_order(dryrun)
@@ -47,19 +75,8 @@ class Trader:
             fh.write('\n'.join(["", message1, message2, message3, ""]))
         Context.set_coin_status(buying_exchange.__class__.__name__)
 
-        with open('config.yml', 'r') as yml:
-           config = yaml.load(yml)
-        if not config['notifycation']['email']['to'] == "":
-            you = config['notifycation']['email']['to']
-            me = config['notifycation']['email']['from']
-            msg = MIMEText(message1 + "\n" + message2 + "\n" + message3)
-            msg['Subject'] = config['notifycation']['email']['subject']
-            msg['To'] = you
-            msg['From'] = me
-            s = smtplib.SMTP()
-            s.connect()
-            s.sendmail(me, [you], msg.as_string())
-            s.close()
+        if self.is_email_notification():
+            self.sendmail(message1 + "\n" + message2 + "\n" + message3)
 
     def decision_and_order(self, coin_status, mon, dryrun):
         # skip when invalid value
@@ -80,6 +97,11 @@ class Trader:
     def trade(self, run_mode):
         if os.path.exists(self.batch_output_filename):
             os.remove(self.batch_output_filename)
+
+        if self.is_email_notification():
+            if not self.checkmailer():
+                print("mailer not activation!")
+                sys.exit()
 
         if run_mode == "RealTrade":
             dryrun = False

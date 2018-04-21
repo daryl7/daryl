@@ -29,13 +29,13 @@ def fetch_url(req, max_times=100, sleep_sec=10):
             return urllib.request.urlopen(req)
         except urllib.error.HTTPError as err:
             applog.applog_warning("HTTPError(retry):" + str(err.code) + ":" + req.get_full_url())
-            time.sleep(sleep_sec)
         except urllib.error.URLError as err:
             applog.applog_warning("URLError(retry):" + str(err.reason) + ":" + req.get_full_url())
-            time.sleep(sleep_sec)
+        except http.client.RemoteDisconnected as err:
+            applog.applog_warning("RemoteDisconnected(retry):" + req.get_full_url())
         except http.client.BadStatusLine as err:
             applog.applog_warning("BadStatusLine(retry):" + req.get_full_url())
-            time.sleep(sleep_sec)
+        time.sleep(sleep_sec)
 
 
 class Context:

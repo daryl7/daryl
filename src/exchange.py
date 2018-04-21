@@ -8,6 +8,7 @@ import datetime
 import yaml
 import binance.client
 import applog
+import traceback
 
 with open('config.yml', 'r') as yml:
     config = yaml.load(yml)
@@ -287,15 +288,38 @@ class Binance:
 
 
 class LegalTender:
-    @staticmethod
-    def get_rate_of_usdjpy():
+    def __init__(self, *args, **kwargs):
+        self.last_v = -1
+
+    def get_rate_of_usdjpy(self):
+        url = "https://www.gaitameonline.com/rateaj/getrate"
         headers = {
             'user-agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36',
             'ACCESS-TIMESTAMP': str(time.time()),
             'Content-Type': 'application/json'
         }
-        req = urllib.request.Request(url="https://www.gaitameonline.com/rateaj/getrate", headers=headers)
+        req = urllib.request.Request(url=url, headers=headers)
+
         with fetch_url(req) as res:
             html = res.read().decode("utf-8")
-            v = float(json.loads(html)['quotes'][20]['ask'])
+
+            try:
+                table = json.loads(html)['quotes'][20]
+                if table['currencyPairCode'] == "USDJPY":
+                    v = float(table['ask'])
+                else:
+                    applog.applog_warning("Results is broken. currencyPairCode: " + table["currencyPairCode"] + ", Use last value:" + str(self.last_v) + " url: " + url)
+                    v = self.last_v
+            except (IndexError, KeyError) as e:
+                applog.applog_warning(e)
+                applog.applog_warning("Failed LegalTender. Use last value:" + str(self.last_v))
+                applog.applog_warning("html = " + html)
+                v = self.last_v
+
+        if v < 0:
+            applog.applog_error("Failed LegalTender!")
+            applog.applog_error("".join(traceback.format_stack()))
+            sys.exit()
+
+        self.last_v = v
         return v

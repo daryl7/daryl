@@ -7,6 +7,7 @@ class Monitor:
     def __init__(self, log_dir = "./log"):
         self.bitflyer = BitFlyer()
         self.binance = Binance()
+        self.legal_tender = LegalTender()
         self.log_dir = log_dir
 
     def __prepare_log_filepath(self, name):
@@ -36,7 +37,7 @@ class Monitor:
         with open(self.__prepare_log_filepath('monitor_BTCJPY_BF_CC/monitor_BTCJPY_BF_CC'), mode = 'a', encoding = 'utf-8') as fh:
             fh.write(res + '\n')
 
-        self.usdjpy = LegalTender.get_rate_of_usdjpy()
+        self.usdjpy = self.legal_tender.get_rate_of_usdjpy()
 
         self.binance = Binance()
         self.binance.refresh_ticker()

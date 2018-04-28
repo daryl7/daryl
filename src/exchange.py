@@ -157,6 +157,22 @@ class BitFlyer:
             self.bid = int(json.loads(html)["best_bid"])
             self.ask = int(json.loads(html)["best_ask"])
 
+    def health_check(self, dryrun):
+        if dryrun:
+            return True
+
+        with BitFlyer.__urlopen_public("GET", "/v1/getboardstate") as res:
+            html = res.read().decode("utf-8")
+        j = json.loads(html)
+        if j["state"] == "RUNNING" and j["health"] in ["NORMAL", "BUSY", "VERY BUSY"]:
+            applog.applog_info("Bitflyer API status:" + j["state"] + ", health:" + j["health"])
+            return True
+        else:
+            applog.applog_warning("Bitflyer API has problem.")
+            applog.applog_warning("state:" + j["state"] + ", health:" + j["health"])
+            applog.applog_warning("watch:https://lightning.bitflyer.jp/docs?lang=ja&_ga=2.27791676.1496421283.1524886778-454668974.1522570784#%E6%9D%BF%E3%81%AE%E7%8A%B6%E6%85%8B")
+            return False
+
     def order(self, body):
         with BitFlyer.__urlopen("POST", "/v1/me/sendchildorder", data = body) as res:
             html = res.read().decode("utf-8")
@@ -260,6 +276,10 @@ class Binance:
             html = res.read().decode("utf-8")
             self.bid = float(json.loads(html)["bidPrice"])
             self.ask = float(json.loads(html)["askPrice"])
+
+    def health_check(self, dryrun):
+        # TODO: implement
+        return True
 
     def buy_order(self, dryrun):
         price = self.ask + config['trader']['order_offset_usd']

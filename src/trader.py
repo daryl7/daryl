@@ -86,13 +86,15 @@ class Trader:
 
         row = [mon.dt, str(mon.bf_bn_diff), str(mon.bn_bf_diff), str(mon.bitflyer.bid), str(mon.bitflyer.ask), str(mon.binance.bid), str(mon.binance.ask), str(mon.usdjpy)]
         if coin_status == CoinStatus.BitFlyer and mon.bf_bn_diff >= self.bf_bn_limit:
-            coin_status = CoinStatus.Binance
-            self.order(mon, mon.binance, mon.bitflyer, mon.bf_bn_diff, dryrun)
-            self.trade_log(row)
+            if mon.health_check(dryrun):
+                coin_status = CoinStatus.Binance
+                self.order(mon, mon.binance, mon.bitflyer, mon.bf_bn_diff, dryrun)
+                self.trade_log(row)
         elif coin_status == CoinStatus.Binance and mon.bn_bf_diff >= self.bn_bf_limit:
-            coin_status = CoinStatus.BitFlyer
-            self.order(mon, mon.bitflyer, mon.binance, mon.bn_bf_diff, dryrun)
-            self.trade_log(row)
+            if mon.health_check(dryrun):
+                coin_status = CoinStatus.BitFlyer
+                self.order(mon, mon.bitflyer, mon.binance, mon.bn_bf_diff, dryrun)
+                self.trade_log(row)
         return coin_status
 
     def trade(self, run_mode):

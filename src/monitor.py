@@ -52,6 +52,9 @@ class Monitor:
         with open(self.__prepare_log_filepath('monitor_BTCJPY_BF_BN/monitor_BTCJPY_BF_BN'), mode = 'a', encoding = 'utf-8') as fh:
             fh.write(res + '\n')
 
+    def health_check(self, dryrun):
+        return self.bitflyer.health_check(dryrun) and self.binance.health_check(dryrun)
+
 def monitor_test_mode():
     mon = Monitor()
     while True:

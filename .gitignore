@@ -2,7 +2,4 @@ __pycache__
 *.pyc
 config.yml
 context.yml
-results_BF_BN.txt
-results_BF_CC.txt
-trade_timing.txt
 trade_simulation.tsv

@@ -22,9 +22,14 @@ class Trader:
             config = yaml.load(yml)
             self.bf_bn_limit = config['trader']['bf_bn_limit']
             self.bn_bf_limit = config['trader']['bn_bf_limit']
-            self.batch_output_filename = './trade_simulation.tsv'
-            self.trade_log_full_filepath = './log/trade_full.log'
-            self.trade_tsv_filepath = './log/trade.tsv'
+            self.order_offset_jpy = config['trader']['order_offset_jpy']
+            self.order_offset_usd = config['trader']['order_offset_usd']
+            self.notification_email_to = config['notifycation']['email']['to']
+            self.notification_email_from = config['notifycation']['email']['from']
+            self.notification_email_subject = config['notifycation']['email']['subject']
+        self.batch_output_filename = './trade_simulation.tsv'
+        self.trade_log_full_filepath = './log/trade_full.log'
+        self.trade_tsv_filepath = './log/trade.tsv'
 
     def trade_log(self, row):
         record = "\t".join(row)
@@ -38,17 +43,13 @@ class Trader:
                 fh.write(record + '\n')
 
     def is_email_notification(self):
-        with open('config.yml', 'r') as yml:
-           config = yaml.load(yml)
-        return not config['notifycation']['email']['to'] == ""
+        return not self.notification_email_to == ""
 
     def sendmail(self, message):
-        with open('config.yml', 'r') as yml:
-           config = yaml.load(yml)
-        you = config['notifycation']['email']['to']
-        me = config['notifycation']['email']['from']
+        you = self.notification_email_to
+        me = self.notification_email_from
         msg = MIMEText(message)
-        msg['Subject'] = config['notifycation']['email']['subject']
+        msg['Subject'] = self.notification_email_subject
         msg['To'] = you
         msg['From'] = me
         s = smtplib.SMTP()
@@ -133,6 +134,18 @@ class Trader:
 
         coin_status = CoinStatus.BitFlyer if Context.get_coin_status() == "BitFlyer" else CoinStatus.Binance
         mon = Monitor()
+
+        applog.applog_info("========================================")
+        applog.applog_info("Start Trader. RunMode = " + run_mode)
+        applog.applog_info("binance.comission_fee: " + str(mon.binance.comission_fee))
+        applog.applog_info("bf_bn_limit = " + str(self.bf_bn_limit))
+        applog.applog_info("bn_bf_limit = " + str(self.bn_bf_limit))
+        applog.applog_info("order_offset_jpy = " + str(self.order_offset_jpy))
+        applog.applog_info("order_offset_usd = " + str(self.order_offset_usd))
+        applog.applog_info("notification_email_to = " + self.notification_email_to)
+        applog.applog_info("notification_email_from = " + self.notification_email_from)
+        applog.applog_info("notification_email_subject = " + self.notification_email_subject)
+        applog.applog_info("========================================")
 
         if run_mode == "Batch":
             tsv = csv.reader(open("results_BF_BN.txt", "r"), delimiter = '\t')

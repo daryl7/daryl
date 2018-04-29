@@ -31,84 +31,70 @@ class Triangular:
             hope = 0
 
             for currency in j:
-                i = currency["symbol"].find("ETH")
-                if not (i == -1 or i == 0):
-                    currency_name = currency["symbol"][0:len(currency["symbol"]) - 3]
-                    btcpair_symbol = currency_name + "BTC"
-                    ethpair_symbol = currency_name + "ETH"
-
-                    xbtc_ask = float(hash[btcpair_symbol]["askPrice"])  # Buy X at BTC
-                    xeth_bid = float(hash[ethpair_symbol]["bidPrice"])  # Buy ETH at X
-                    ethbtc_bid = float(hash["ETHBTC"]["bidPrice"])      # Buy BTC at ETH
-                    rate_via_eth_bid = 1 / xbtc_ask * xeth_bid * ethbtc_bid * (1 - self.binance.comission_fee)**3
-
-                    ethbtc_ask = float(hash["ETHBTC"]["askPrice"])      # Buy ETH at BTC
-                    xeth_ask = float(hash[ethpair_symbol]["askPrice"])  # Buy X at ETH
-                    xbtc_bid = float(hash[btcpair_symbol]["bidPrice"])  # Buy BTC at X
-                    rate_via_eth_ask = 1 / ethbtc_ask / xeth_ask * xbtc_bid * (1 - self.binance.comission_fee)**3
-
+                r = self.triangle_all_check("BTC", "ETH", currency, hash)
+                if r >=0:
                     total += 2
-                    if rate_via_eth_bid > 1:
-                        row_via_eth_bid = [
-                            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            "BTC->" + currency_name + "->ETH->BTC", str8(rate_via_eth_bid),
-                            btcpair_symbol + "(ask)", str8(xbtc_ask),
-                            ethpair_symbol + "(bid)", str8(xeth_bid),
-                            "ETHBTC(bid)", str8(ethbtc_bid)
-                        ]
-                        self.log(row_via_eth_bid)
-                        hope += 1
-                    if rate_via_eth_ask > 1:
-                        row_via_eth_ask = [
-                            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            "BTC->ETH->" + currency_name + "->BTC", str8(rate_via_eth_ask),
-                            "ETHBTC(ask)", str8(ethbtc_ask),
-                            ethpair_symbol + "(ask)", str8(xeth_ask),
-                            btcpair_symbol + "(bid)", str8(xbtc_bid)
-                        ]
-                        self.log(row_via_eth_ask)
-                        hope += 1
+                    hope += r
 
-                i = currency["symbol"].find("BNB")
-                if not (i == -1 or i == 0):
-                    currency_name = currency["symbol"][0:len(currency["symbol"]) - 3]
-                    btcpair_symbol = currency_name + "BTC"
-                    bnbpair_symbol = currency_name + "BNB"
-
-                    xbtc_ask = float(hash[btcpair_symbol]["askPrice"])  # Buy X at BTC
-                    xbnb_bid = float(hash[bnbpair_symbol]["bidPrice"])  # Buy BNB at X
-                    bnbbtc_bid = float(hash["BNBBTC"]["bidPrice"])      # Buy BTC at BNB
-                    rate_via_bnb_bid = 1 / xbtc_ask * xbnb_bid * bnbbtc_bid * (1 - self.binance.comission_fee)**3
-
-                    bnbbtc_ask = float(hash["BNBBTC"]["askPrice"])      # Buy BNB at BTC
-                    xbnb_ask = float(hash[bnbpair_symbol]["askPrice"])  # Buy X at BNB
-                    xbtc_bid = float(hash[btcpair_symbol]["bidPrice"])  # Buy BTC at X
-                    rate_via_bnb_ask = 1 / bnbbtc_ask / xbnb_ask * xbtc_bid * (1 - self.binance.comission_fee)**3
-
+                r = self.triangle_all_check("BTC", "BNB", currency, hash)
+                if r >=0:
                     total += 2
-                    if rate_via_bnb_bid > 1:
-                        row_via_bnb_bid = [
-                            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            "BTC->" + currency_name + "->BNB->BTC", str8(rate_via_bnb_bid),
-                            btcpair_symbol + "(ask)", str8(xbtc_ask),
-                            bnbpair_symbol + "(bid)", str8(xbnb_bid),
-                            "BNBBTC(bid)", str8(bnbbtc_bid)
-                        ]
-                        self.log(row_via_bnb_bid)
-                        hope += 1
-                    if rate_via_bnb_ask > 1:
-                        row_via_bnb_ask = [
-                            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                            "BTC->BNB->" + currency_name + "->BTC", str8(rate_via_bnb_ask),
-                            "BNBBTC(ask)", str8(bnbbtc_ask),
-                            bnbpair_symbol + "(ask)", str8(xbnb_ask),
-                            btcpair_symbol + "(bid)", str8(xbtc_bid)
-                        ]
-                        self.log(row_via_bnb_ask)
-                        hope += 1
+                    hope += r
+
+                r = self.triangle_all_check("ETH", "BNB", currency, hash)
+                if r >=0:
+                    total += 2
+                    hope += r
 
             print("hope/total = " + str(hope) + "/" + str(total))
             time.sleep(self.interval)
+
+    def triangle_all_check(self, base_currency_name, via_currency_name, currency, hash):
+        i = currency["symbol"].find(via_currency_name)
+        if not (i == -1 or i == 0):
+            currency_name = currency["symbol"][0:len(currency["symbol"]) - 3]
+            btcpair_symbol = currency_name + base_currency_name
+            viapair_symbol = currency_name + via_currency_name
+            viabtcpair_symbol = via_currency_name + base_currency_name
+            if currency_name in ["BTC", "ETH", "BNB"]:
+                return -1
+            if viabtcpair_symbol in ["BTC", "ETH", "BNB"]:
+                return -1
+
+            xbtc_ask = float(hash[btcpair_symbol]["askPrice"])  # Buy X at BTC
+            xvia_bid = float(hash[viapair_symbol]["bidPrice"])  # Buy (VIA) at X
+            viabtc_bid = float(hash[viabtcpair_symbol]["bidPrice"])      # Buy BTC at (VIA)
+            rate_via_bid = 1 / xbtc_ask * xvia_bid * viabtc_bid * (1 - self.binance.comission_fee)**3
+
+            viabtc_ask = float(hash[viabtcpair_symbol]["askPrice"])      # Buy (VIA) at BTC
+            xvia_ask = float(hash[viapair_symbol]["askPrice"])  # Buy X at (VIA)
+            xbtc_bid = float(hash[btcpair_symbol]["bidPrice"])  # Buy BTC at X
+            rate_via_ask = 1 / viabtc_ask / xvia_ask * xbtc_bid * (1 - self.binance.comission_fee)**3
+
+            hope = 0
+            if rate_via_bid > 1:
+                row_via_bid = [
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    base_currency_name + "->" + currency_name + "->" + via_currency_name + "->" + base_currency_name, str8(rate_via_bid),
+                    btcpair_symbol + "(ask)", str8(xbtc_ask),
+                    viapair_symbol + "(bid)", str8(xvia_bid),
+                    via_currency_name + "BTC(bid)", str8(viabtc_bid)
+                ]
+                self.log(row_via_bid)
+                hope += 1
+            if rate_via_ask > 1:
+                row_via_ask = [
+                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    base_currency_name + "->" + via_currency_name + "->" + currency_name + "->" + base_currency_name, str8(rate_via_ask),
+                    via_currency_name + "BTC(ask)", str8(viabtc_ask),
+                    viapair_symbol + "(ask)", str8(xvia_ask),
+                    btcpair_symbol + "(bid)", str8(xbtc_bid)
+                ]
+                self.log(row_via_ask)
+                hope += 1
+            return hope
+        else:
+            return -1
 
 
 if __name__ == '__main__':

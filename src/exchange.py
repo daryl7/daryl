@@ -328,6 +328,23 @@ class Binance:
         return "\tsell_order: Binance, " + str(price) + ", " + str(lot)
 
 
+class Poloniex:
+    __api_endpoint = "https://poloniex.com"
+
+    @staticmethod
+    def __urlopen_public(method, path, *, param={}):
+        headers = {
+            'Content-Type': 'application/json'
+        }
+        req = urllib.request.Request(url=Poloniex.__api_endpoint + path + "?" + urllib.parse.urlencode(param), headers=headers)
+        return fetch_url(req)
+
+    def refresh_ticker_all(self):
+        with Poloniex.__urlopen_public("GET", "/public", param = {"command":"returnTicker"}) as res:
+            html = res.read().decode("utf-8")
+            return json.loads(html)
+
+
 class LegalTender:
     def __init__(self, *args, **kwargs):
         self.last_v = -1

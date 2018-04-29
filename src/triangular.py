@@ -1,5 +1,5 @@
 import time
-from exchange import Binance
+from exchange import Binance, Poloniex
 import json
 from datetime import datetime
 
@@ -10,6 +10,7 @@ def str8(v):
 class Triangular:
     def __init__(self, *args, **kwargs):
         self.binance = Binance()
+        self.poloniex = Poloniex()
         self.tsv_filepath = "./log/triangular.tsv"
         self.interval = 5
 
@@ -19,44 +20,77 @@ class Triangular:
         with open(self.tsv_filepath, mode = 'a', encoding = 'utf-8') as fh:
             fh.write(record + '\n')
 
-    def run(self):
-        hash = {}
+    def run(self, is_binance, is_poloniex):
         while True:
-            j = self.binance.refresh_ticker_all()
-
-            for currency in j:
-                hash[currency["symbol"]] = currency
-
             total = 0
             hope = 0
 
-            for currency in j:
-                r = self.triangle_all_check("BTC", "ETH", currency, hash)
-                if r >=0:
-                    total += 2
-                    hope += r
+            if is_binance:
+                j = self.binance.refresh_ticker_all()
+                hash = {}
+                for currency in j:
+                    hash[currency["symbol"]] = currency
+                for symbol in hash:
+                    r = self.triangle_all_check("Binance", "BTC", "ETH", symbol, hash, self.binance.comission_fee)
+                    if r >=0:
+                        total += 2
+                        hope += r
+                    r = self.triangle_all_check("Binance", "BTC", "BNB", symbol, hash, self.binance.comission_fee)
+                    if r >=0:
+                        total += 2
+                        hope += r
+                    r = self.triangle_all_check("Binance", "ETH", "BNB", symbol, hash, self.binance.comission_fee)
+                    if r >=0:
+                        total += 2
+                        hope += r
 
-                r = self.triangle_all_check("BTC", "BNB", currency, hash)
-                if r >=0:
-                    total += 2
-                    hope += r
-
-                r = self.triangle_all_check("ETH", "BNB", currency, hash)
-                if r >=0:
-                    total += 2
-                    hope += r
+            if is_poloniex:
+                j = self.poloniex.refresh_ticker_all()
+                hash ={}
+                for symbol in j:
+                    r = symbol.split("_")
+                    newsymbol = r[1] + r[0]
+                    hash[newsymbol] = {
+                        "askPrice": j[symbol]["lowestAsk"],
+                        "askQty": -1,
+                        "bidPrice": j[symbol]["highestBid"],
+                        "bidQty": -1
+                    }
+                for symbol in hash:
+                    r = self.triangle_all_check("Poloniex", "BTC", "ETH", symbol, hash, 0.0025)
+                    if r >=0:
+                        total += 2
+                        hope += r
+                    r = self.triangle_all_check("Poloniex", "BTC", "XMR", symbol, hash, 0.0025)
+                    if r >=0:
+                        total += 2
+                        hope += r
+                    r = self.triangle_all_check("Poloniex", "ETH", "XMR", symbol, hash, 0.0025)
+                    if r >=0:
+                        total += 2
+                        hope += r
+                    r = self.triangle_all_check("Poloniex", "USDT", "BTC", symbol, hash, 0.0025)
+                    if r >=0:
+                        total += 2
+                        hope += r
+                    r = self.triangle_all_check("Poloniex", "USDT", "ETH", symbol, hash, 0.0025)
+                    if r >=0:
+                        total += 2
+                        hope += r
 
             print("hope/total = " + str(hope) + "/" + str(total))
             time.sleep(self.interval)
 
-    def triangle_all_check(self, base_currency_name, via_currency_name, currency, hash):
-        i = currency["symbol"].find(via_currency_name)
+    def triangle_all_check(self, exchange_name, base_currency_name, via_currency_name, symbol, hash, fee):
+        i = symbol.find(via_currency_name)
         if not (i == -1 or i == 0):
-            currency_name = currency["symbol"][0:len(currency["symbol"]) - 3]
+            currency_name = symbol[0:len(symbol) - len(via_currency_name)]
             btcpair_symbol = currency_name + base_currency_name
             viapair_symbol = currency_name + via_currency_name
             viabtcpair_symbol = via_currency_name + base_currency_name
-            if currency_name in ["BTC", "ETH", "BNB"]:
+            if currency_name in ["BTC", "ETH", "BNB", "XMR", "USDT"]:
+                return -1
+            if not (btcpair_symbol in hash and viapair_symbol in hash and viabtcpair_symbol in hash):
                 return -1
 
             xbtc_ask_price   = float(hash[btcpair_symbol]["askPrice"])    # Buy X at BTC
@@ -65,7 +99,7 @@ class Triangular:
             xvia_bid_lot     = float(hash[viapair_symbol]["bidQty"])
             viabtc_bid_price = float(hash[viabtcpair_symbol]["bidPrice"]) # Buy BTC at (VIA)
             viabtc_bid_lot   = float(hash[viabtcpair_symbol]["bidQty"])
-            rate_via_bid     = 1 / xbtc_ask_price * xvia_bid_price * viabtc_bid_price * (1 - self.binance.comission_fee)**3
+            rate_via_bid     = 1 / xbtc_ask_price * xvia_bid_price * viabtc_bid_price * (1 - fee)**3
 
             viabtc_ask_price = float(hash[viabtcpair_symbol]["askPrice"]) # Buy (VIA) at BTC
             viabtc_ask_lot   = float(hash[viabtcpair_symbol]["askQty"])
@@ -73,12 +107,13 @@ class Triangular:
             xvia_ask_lot     = float(hash[viapair_symbol]["askQty"])
             xbtc_bid_price   = float(hash[btcpair_symbol]["bidPrice"])    # Buy BTC at X
             xbtc_bid_lot     = float(hash[btcpair_symbol]["bidQty"])
-            rate_via_ask     = 1 / viabtc_ask_price / xvia_ask_price * xbtc_bid_price * (1 - self.binance.comission_fee)**3
+            rate_via_ask     = 1 / viabtc_ask_price / xvia_ask_price * xbtc_bid_price * (1 - fee)**3
 
             hope = 0
             if rate_via_bid > 1:
                 row_via_bid = [
                     datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    exchange_name,
                     base_currency_name + "->" + currency_name + "->" + via_currency_name + "->" + base_currency_name, str8(rate_via_bid),
                     btcpair_symbol + "(ask)", str8(xbtc_ask_price), str8(xbtc_ask_lot),
                     viapair_symbol + "(bid)", str8(xvia_bid_price), str8(xvia_bid_lot),
@@ -89,6 +124,7 @@ class Triangular:
             if rate_via_ask > 1:
                 row_via_ask = [
                     datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    exchange_name,
                     base_currency_name + "->" + via_currency_name + "->" + currency_name + "->" + base_currency_name, str8(rate_via_ask),
                     via_currency_name + "BTC(ask)", str8(viabtc_ask_price), str8(viabtc_ask_lot),
                     viapair_symbol + "(ask)", str8(xvia_ask_price), str8(xvia_ask_lot),
@@ -103,4 +139,4 @@ class Triangular:
 
 if __name__ == '__main__':
     triangular = Triangular()
-    triangular.run()
+    triangular.run(True, True)

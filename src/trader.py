@@ -70,9 +70,9 @@ class Trader:
         message1 = selling_exchange.__class__.__name__ + "->" + buying_exchange.__class__.__name__ + "(" + monitor.dt + ", diff:" + str(diff) + ")"
         message2 = buying_exchange.buy_order(dryrun)
         message3 = selling_exchange.sell_order(dryrun)
-        applog.applog_info(message1)
-        applog.applog_info(message2)
-        applog.applog_info(message3)
+        applog.info(message1)
+        applog.info(message2)
+        applog.info(message3)
         with open(self.trade_log_full_filepath, mode = 'a', encoding = 'utf-8') as fh:
             fh.write('\n'.join(["", message1, message2, message3, ""]))
         Context.set_coin_status(buying_exchange.__class__.__name__)
@@ -124,7 +124,7 @@ class Trader:
 
         if self.is_email_notification():
             if not self.checkmailer():
-                applog.applog_error("mailer not activation!")
+                applog.error("mailer not activation!")
                 sys.exit()
 
         if run_mode == "RealTrade":
@@ -135,17 +135,17 @@ class Trader:
         coin_status = CoinStatus.BitFlyer if Context.get_coin_status() == "BitFlyer" else CoinStatus.Binance
         mon = Monitor()
 
-        applog.applog_info("========================================")
-        applog.applog_info("Start Trader. RunMode = " + run_mode)
-        applog.applog_info("binance.comission_fee: " + str(mon.binance.comission_fee))
-        applog.applog_info("bf_bn_limit = " + str(self.bf_bn_limit))
-        applog.applog_info("bn_bf_limit = " + str(self.bn_bf_limit))
-        applog.applog_info("order_offset_jpy = " + str(self.order_offset_jpy))
-        applog.applog_info("order_offset_usd = " + str(self.order_offset_usd))
-        applog.applog_info("notification_email_to = " + self.notification_email_to)
-        applog.applog_info("notification_email_from = " + self.notification_email_from)
-        applog.applog_info("notification_email_subject = " + self.notification_email_subject)
-        applog.applog_info("========================================")
+        applog.info("========================================")
+        applog.info("Start Trader. RunMode = " + run_mode)
+        applog.info("binance.comission_fee: " + str(mon.binance.comission_fee))
+        applog.info("bf_bn_limit = " + str(self.bf_bn_limit))
+        applog.info("bn_bf_limit = " + str(self.bn_bf_limit))
+        applog.info("order_offset_jpy = " + str(self.order_offset_jpy))
+        applog.info("order_offset_usd = " + str(self.order_offset_usd))
+        applog.info("notification_email_to = " + self.notification_email_to)
+        applog.info("notification_email_from = " + self.notification_email_from)
+        applog.info("notification_email_subject = " + self.notification_email_subject)
+        applog.info("========================================")
 
         if run_mode == "Batch":
             tsv = csv.reader(open("results_BF_BN.txt", "r"), delimiter = '\t')
@@ -170,7 +170,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] in {"RealTrade", "DemoTrade", "Batch"}:
         run_mode = sys.argv[1]
     else:
-        applog.applog_error("bad argument!")
+        applog.error("bad argument!")
         sys.exit()
 
     trader = Trader()

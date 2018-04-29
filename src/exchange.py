@@ -21,20 +21,20 @@ def fetch_url(req, max_times=100, sleep_sec=10):
     retry_count = 0
     while True:
         if retry_count > max_times:
-            applog.applog_error("fetch_url error")
+            applog.error("fetch_url error")
             break
 
         try:
             retry_count += 1
             return urllib.request.urlopen(req)
         except urllib.error.HTTPError as err:
-            applog.applog_warning("HTTPError(retry):" + str(err.code) + ":" + req.get_full_url())
+            applog.warning("HTTPError(retry):" + str(err.code) + ":" + req.get_full_url())
         except urllib.error.URLError as err:
-            applog.applog_warning("URLError(retry):" + str(err.reason) + ":" + req.get_full_url())
+            applog.warning("URLError(retry):" + str(err.reason) + ":" + req.get_full_url())
         except http.client.RemoteDisconnected as err:
-            applog.applog_warning("RemoteDisconnected(retry):" + req.get_full_url())
+            applog.warning("RemoteDisconnected(retry):" + req.get_full_url())
         except http.client.BadStatusLine as err:
-            applog.applog_warning("BadStatusLine(retry):" + req.get_full_url())
+            applog.warning("BadStatusLine(retry):" + req.get_full_url())
         time.sleep(sleep_sec)
 
 
@@ -126,7 +126,7 @@ class BitFlyer:
 
         timestamp = str(time.time())
         text = timestamp + method + path + paramtext + body
-        applog.applog_info(text)
+        applog.info(text)
         sign = hmac.new(bytes(bitflyer_api_secret.encode('ascii')), bytes(text.encode('ascii')), hashlib.sha256).hexdigest()
 
         headers = {
@@ -165,18 +165,18 @@ class BitFlyer:
             html = res.read().decode("utf-8")
         j = json.loads(html)
         if j["state"] == "RUNNING" and j["health"] in ["NORMAL", "BUSY", "VERY BUSY"]:
-            applog.applog_info("Bitflyer API status:" + j["state"] + ", health:" + j["health"])
+            applog.info("Bitflyer API status:" + j["state"] + ", health:" + j["health"])
             return True
         else:
-            applog.applog_warning("Bitflyer API has problem.")
-            applog.applog_warning("state:" + j["state"] + ", health:" + j["health"])
-            applog.applog_warning("watch:https://lightning.bitflyer.jp/docs?lang=ja&_ga=2.27791676.1496421283.1524886778-454668974.1522570784#%E6%9D%BF%E3%81%AE%E7%8A%B6%E6%85%8B")
+            applog.warning("Bitflyer API has problem.")
+            applog.warning("state:" + j["state"] + ", health:" + j["health"])
+            applog.warning("watch:https://lightning.bitflyer.jp/docs?lang=ja&_ga=2.27791676.1496421283.1524886778-454668974.1522570784#%E6%9D%BF%E3%81%AE%E7%8A%B6%E6%85%8B")
             return False
 
     def order(self, body):
         with BitFlyer.__urlopen("POST", "/v1/me/sendchildorder", data = body) as res:
             html = res.read().decode("utf-8")
-            applog.applog_info(html)
+            applog.info(html)
             child_order_acceptance_id = json.loads(html)["child_order_acceptance_id"]
 
         retry_count = 0
@@ -189,7 +189,7 @@ class BitFlyer:
             with BitFlyer.__urlopen("GET", "/v1/me/getchildorders", param = {"child_order_acceptance_id":child_order_acceptance_id}) as res:
                 html = res.read().decode("utf-8")
                 if len(json.loads(html)) > 0:
-                    applog.applog_info(html)
+                    applog.info(html)
                     commission = json.loads(html)[0]["total_commission"]
                     break
         return [child_order_acceptance_id, commission]
@@ -344,17 +344,17 @@ class LegalTender:
                 if table['currencyPairCode'] == "USDJPY":
                     v = float(table['ask'])
                 else:
-                    applog.applog_warning("Results is broken. currencyPairCode: " + table["currencyPairCode"] + ", Use last value:" + str(self.last_v) + " url: " + url)
+                    applog.warning("Results is broken. currencyPairCode: " + table["currencyPairCode"] + ", Use last value:" + str(self.last_v) + " url: " + url)
                     v = self.last_v
             except (IndexError, KeyError) as e:
-                applog.applog_warning(e)
-                applog.applog_warning("Failed LegalTender. Use last value:" + str(self.last_v))
-                applog.applog_warning("html = " + html)
+                applog.warning(e)
+                applog.warning("Failed LegalTender. Use last value:" + str(self.last_v))
+                applog.warning("html = " + html)
                 v = self.last_v
 
         if v < 0:
-            applog.applog_error("Failed LegalTender!")
-            applog.applog_error("".join(traceback.format_stack()))
+            applog.error("Failed LegalTender!")
+            applog.error("".join(traceback.format_stack()))
             sys.exit()
 
         self.last_v = v

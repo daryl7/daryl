@@ -7,14 +7,14 @@ logging.basicConfig(
     filemode = 'a',
     format='%(asctime)s %(levelname)s %(message)s')
 
-def applog_error(message):
+def error(message):
     print(message)
     logging.error(message)
 
-def applog_warning(message):
+def warning(message):
     print(message)
     logging.warning(message)
 
-def applog_info(message):
+def info(message):
     print(message)
     logging.info(message)

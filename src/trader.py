@@ -89,11 +89,31 @@ class Trader:
             if mon.health_check(dryrun):
                 coin_status = CoinStatus.Binance
                 self.order(mon, mon.binance, mon.bitflyer, mon.bf_bn_diff, dryrun)
+                row.extend([
+                    "SELL",
+                    str(mon.bitflyer.last_sell_price),
+                    str(mon.bitflyer.last_sell_lot),
+                    str(mon.bitflyer.last_sell_commission),
+                    "BUY",
+                    str(mon.binance.last_buy_price),
+                    str(mon.binance.last_buy_lot),
+                    str(mon.binance.last_buy_comission)
+                ])
                 self.trade_log(row)
         elif coin_status == CoinStatus.Binance and mon.bn_bf_diff >= self.bn_bf_limit:
             if mon.health_check(dryrun):
                 coin_status = CoinStatus.BitFlyer
                 self.order(mon, mon.bitflyer, mon.binance, mon.bn_bf_diff, dryrun)
+                row.extend([
+                    "BUY",
+                    str(mon.bitflyer.last_buy_price),
+                    str(mon.bitflyer.last_buy_lot),
+                    str(mon.bitflyer.last_buy_commission),
+                    "SELL",
+                    str(mon.binance.last_sell_price),
+                    str(mon.binance.last_sell_lot),
+                    str(mon.binance.last_sell_comission)
+                ])
                 self.trade_log(row)
         return coin_status
 

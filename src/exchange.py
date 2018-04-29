@@ -210,8 +210,11 @@ class BitFlyer:
             commission = r[1]
         else:
             child_order_acceptance_id = "demo"
-            commission = 0
+            commission = round(lot * 0.0015,8)
         Context.exchange_bitflyer(price, True)
+        self.last_buy_price = price
+        self.last_buy_lot = lot
+        self.last_buy_commission = commission
         return "\tbuy_order:BitFlyer, price:" + str(price) + ", lot:" + str(lot) + ", commission:" + str(commission) + ", child_order_acceptance_id:" + child_order_acceptance_id
 
     def sell_order(self, dryrun):
@@ -230,8 +233,11 @@ class BitFlyer:
             commission = r[1]
         else:
             child_order_acceptance_id = "demo"
-            commission = 0
+            commission = round(lot * 0.0015,8)
         Context.exchange_bitflyer(price, False)
+        self.last_sell_price = price
+        self.last_sell_lot = lot
+        self.last_sell_commission = commission
         return "\tsell_order:BitFlyer, price:" + str(price) + ", lot:" + str(lot) + ", commission:" + str(commission) + ", child_order_acceptance_id:" + child_order_acceptance_id
 
 
@@ -260,6 +266,7 @@ class Binance:
 
     def __init__(self, *args, **kwargs):
         self.client = binance.client.Client(config['binance']['api_key'], config['binance']['api_secret'])
+        self.comission_fee = config['binance']['comission_fee']
 
     @staticmethod
     def __urlopen_public(method, path, *, param={}):
@@ -293,6 +300,9 @@ class Binance:
                 quantity = lot,
                 price = price )
         Context.exchange_binance(price, True)
+        self.last_buy_price = price
+        self.last_buy_lot = lot
+        self.last_buy_comission = round(lot * self.comission_fee, 8)
         return "\tbuy_order: Binance, " + str(price) + ", " + str(lot)
 
     def sell_order(self, dryrun):
@@ -307,6 +317,9 @@ class Binance:
                 quantity = lot,
                 price = price )
         Context.exchange_binance(price, False)
+        self.last_sell_price = price
+        self.last_sell_lot = lot
+        self.last_sell_comission = round(lot * self.comission_fee, 8)
         return "\tsell_order: Binance, " + str(price) + ", " + str(lot)
 
 

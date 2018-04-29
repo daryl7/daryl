@@ -61,24 +61,30 @@ class Triangular:
             if viabtcpair_symbol in ["BTC", "ETH", "BNB"]:
                 return -1
 
-            xbtc_ask = float(hash[btcpair_symbol]["askPrice"])  # Buy X at BTC
-            xvia_bid = float(hash[viapair_symbol]["bidPrice"])  # Buy (VIA) at X
-            viabtc_bid = float(hash[viabtcpair_symbol]["bidPrice"])      # Buy BTC at (VIA)
-            rate_via_bid = 1 / xbtc_ask * xvia_bid * viabtc_bid * (1 - self.binance.comission_fee)**3
+            xbtc_ask_price   = float(hash[btcpair_symbol]["askPrice"])    # Buy X at BTC
+            xbtc_ask_lot     = float(hash[btcpair_symbol]["askQty"])
+            xvia_bid_price   = float(hash[viapair_symbol]["bidPrice"])    # Buy (VIA) at X
+            xvia_bid_lot     = float(hash[viapair_symbol]["bidQty"])
+            viabtc_bid_price = float(hash[viabtcpair_symbol]["bidPrice"]) # Buy BTC at (VIA)
+            viabtc_bid_lot   = float(hash[viabtcpair_symbol]["bidQty"])
+            rate_via_bid     = 1 / xbtc_ask_price * xvia_bid_price * viabtc_bid_price * (1 - self.binance.comission_fee)**3
 
-            viabtc_ask = float(hash[viabtcpair_symbol]["askPrice"])      # Buy (VIA) at BTC
-            xvia_ask = float(hash[viapair_symbol]["askPrice"])  # Buy X at (VIA)
-            xbtc_bid = float(hash[btcpair_symbol]["bidPrice"])  # Buy BTC at X
-            rate_via_ask = 1 / viabtc_ask / xvia_ask * xbtc_bid * (1 - self.binance.comission_fee)**3
+            viabtc_ask_price = float(hash[viabtcpair_symbol]["askPrice"]) # Buy (VIA) at BTC
+            viabtc_ask_lot   = float(hash[viabtcpair_symbol]["askQty"])
+            xvia_ask_price   = float(hash[viapair_symbol]["askPrice"])    # Buy X at (VIA)
+            xvia_ask_lot     = float(hash[viapair_symbol]["askQty"])
+            xbtc_bid_price   = float(hash[btcpair_symbol]["bidPrice"])    # Buy BTC at X
+            xbtc_bid_lot     = float(hash[btcpair_symbol]["bidQty"])
+            rate_via_ask     = 1 / viabtc_ask_price / xvia_ask_price * xbtc_bid_price * (1 - self.binance.comission_fee)**3
 
             hope = 0
             if rate_via_bid > 1:
                 row_via_bid = [
                     datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     base_currency_name + "->" + currency_name + "->" + via_currency_name + "->" + base_currency_name, str8(rate_via_bid),
-                    btcpair_symbol + "(ask)", str8(xbtc_ask),
-                    viapair_symbol + "(bid)", str8(xvia_bid),
-                    via_currency_name + "BTC(bid)", str8(viabtc_bid)
+                    btcpair_symbol + "(ask)", str8(xbtc_ask_price), str8(xbtc_ask_lot),
+                    viapair_symbol + "(bid)", str8(xvia_bid_price), str8(xvia_bid_lot),
+                    via_currency_name + "BTC(bid)", str8(viabtc_bid_price), str8(viabtc_bid_lot)
                 ]
                 self.log(row_via_bid)
                 hope += 1
@@ -86,9 +92,9 @@ class Triangular:
                 row_via_ask = [
                     datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     base_currency_name + "->" + via_currency_name + "->" + currency_name + "->" + base_currency_name, str8(rate_via_ask),
-                    via_currency_name + "BTC(ask)", str8(viabtc_ask),
-                    viapair_symbol + "(ask)", str8(xvia_ask),
-                    btcpair_symbol + "(bid)", str8(xbtc_bid)
+                    via_currency_name + "BTC(ask)", str8(viabtc_ask_price), str8(viabtc_ask_lot),
+                    viapair_symbol + "(ask)", str8(xvia_ask_price), str8(xvia_ask_lot),
+                    btcpair_symbol + "(bid)", str8(xbtc_bid_price), str8(xbtc_bid_lot)
                 ]
                 self.log(row_via_ask)
                 hope += 1

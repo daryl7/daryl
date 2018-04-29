@@ -58,8 +58,6 @@ class Triangular:
             viabtcpair_symbol = via_currency_name + base_currency_name
             if currency_name in ["BTC", "ETH", "BNB"]:
                 return -1
-            if viabtcpair_symbol in ["BTC", "ETH", "BNB"]:
-                return -1
 
             xbtc_ask_price   = float(hash[btcpair_symbol]["askPrice"])    # Buy X at BTC
             xbtc_ask_lot     = float(hash[btcpair_symbol]["askQty"])

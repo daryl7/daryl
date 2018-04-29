@@ -284,6 +284,11 @@ class Binance:
             self.bid = float(json.loads(html)["bidPrice"])
             self.ask = float(json.loads(html)["askPrice"])
 
+    def refresh_ticker_all(self):
+        with Binance.__urlopen_public("GET", "/api/v3/ticker/bookTicker") as res:
+            html = res.read().decode("utf-8")
+        return json.loads(html)
+
     def health_check(self, dryrun):
         # TODO: implement
         return True

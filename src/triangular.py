@@ -161,7 +161,7 @@ class Triangular:
         for triangle_order in triangle_orders:
             rate = float(triangle_order[3])
             if rate - 1 < 0.003:
-                print("rate too small. rate=%s" % rate) 
+                print("Profits too small. rate=%s" % rate) 
                 continue
 
             base_currency_name = triangle_order[2][:3]
@@ -173,59 +173,65 @@ class Triangular:
                     "side": triangle_order[4].split(":")[1],
                     "price": float(triangle_order[5]),
                     "lot": float(triangle_order[6]),
-                    "btc_lot": float(triangle_order[7]),
+                    "base_lot": float(triangle_order[7]),
                 },
                 {
                     "symbol": triangle_order[8].split(":")[0],
                     "side": triangle_order[8].split(":")[1],
                     "price": float(triangle_order[9]),
                     "lot": float(triangle_order[10]),
-                    "btc_lot": float(triangle_order[11]),
+                    "base_lot": float(triangle_order[11]),
                 },
                 {
                     "symbol": triangle_order[12].split(":")[0],
                     "side": triangle_order[12].split(":")[1],
                     "price": float(triangle_order[13]),
                     "lot": float(triangle_order[14]),
-                    "btc_lot": float(triangle_order[15]),
+                    "base_lot": float(triangle_order[15]),
                 },
             ]
 
-            min_btc_lot = min([orders[0]["btc_lot"], orders[1]["btc_lot"], orders[2]["btc_lot"]])
-            min_btc_lot = min(min_btc_lot, self.__get_asset_lot(base_currency_name))
+            min_base_lot = min([orders[0]["base_lot"], orders[1]["base_lot"], orders[2]["base_lot"]]) * 0.5 # risk hedge
+            min_base_lot = min(min_base_lot, self.__get_asset_lot(base_currency_name))
 
-            if min_btc_lot < self.__get_lower_limit(base_currency_name, True):
-                print("total must be at latest %f%s. (min_btc_lot = %0.8f)" % (self.__get_lower_limit(base_currency_name, True), base_currency_name, min_btc_lot))
+            if min_base_lot < self.__get_lower_limit(base_currency_name, True):
+                print("Total must be at latest %f%s. (min_base_lot = %0.8f)" % (self.__get_lower_limit(base_currency_name, True), base_currency_name, min_base_lot))
                 continue
 
-            orders[0]["final_lot"] = self.binance.lot_filter(orders[0]["symbol"], orders[0]["lot"] * min_btc_lot / orders[0]["btc_lot"])
-            orders[0]["final_btc_lot"] = min_btc_lot
-            if orders[0]["final_lot"] == 0:
-                print("lot too small. " + orders[0]["symbol"] + " final_lot is 0.")
-                continue
+            orders[0]["final_lot"] = self.binance.lot_filter(orders[0]["symbol"], orders[0]["lot"] * min_base_lot / orders[0]["base_lot"])
             if orders[1]["side"] == "BUY":
                 orders[1]["final_lot"] = self.binance.lot_filter(orders[1]["symbol"], orders[0]["final_lot"] / orders[1]["price"])
-                orders[1]["final_btc_lot"] = min_btc_lot
-                orders[2]["final_lot"] = orders[1]["final_lot"]
-                orders[2]["final_btc_lot"] = min_btc_lot
             elif orders[1]["side"] == "SELL":
                 orders[1]["final_lot"] = self.binance.lot_filter(orders[1]["symbol"], orders[0]["final_lot"] * orders[1]["price"])
-                orders[1]["final_btc_lot"] = min_btc_lot
-                orders[2]["final_lot"] = self.binance.lot_filter(orders[2]["symbol"], orders[1]["final_lot"] * orders[1]["price"])
-                orders[2]["final_btc_lot"] = min_btc_lot
+            orders[2]["final_lot"] = orders[1]["final_lot"]
 
             via_lot = orders[1]["final_lot"] * orders[1]["price"]
             if via_lot < self.__get_lower_limit(via_currency_name, False):
-                print("total must be at latest %f%s. (via_lot = %0.8f)" % (self.__get_lower_limit(via_currency_name, False), via_currency_name, via_lot))
+                print("Total must be at latest %f%s. (via_lot = %0.8f)" % (self.__get_lower_limit(via_currency_name, False), via_currency_name, via_lot))
                 continue
 
-            print("order-1st:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f, final_btc_lot:%0.8f" % (orders[0]["symbol"], orders[0]["side"], orders[0]["price"], orders[0]["lot"], orders[0]["btc_lot"], orders[0]["final_lot"], orders[0]["final_btc_lot"]))
-            print("order-2nd:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f, final_btc_lot:%0.8f" % (orders[1]["symbol"], orders[1]["side"], orders[1]["price"], orders[1]["lot"], orders[1]["btc_lot"], orders[1]["final_lot"], orders[1]["final_btc_lot"]))
-            print("order-3rd:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f, final_btc_lot:%0.8f" % (orders[2]["symbol"], orders[2]["side"], orders[2]["price"], orders[2]["lot"], orders[2]["btc_lot"], orders[2]["final_lot"], orders[2]["final_btc_lot"]))
-            print(
-                self.binance.lot_filter(orders[0]["symbol"], orders[0]["lot"] * min_btc_lot / orders[0]["btc_lot"]),
-                "%0.8f" % orders[0]["price"],
-            )
+            msgs = []
+            msgs.append("1st order:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f" % (orders[0]["symbol"], orders[0]["side"], orders[0]["price"], orders[0]["lot"], orders[0]["base_lot"], orders[0]["final_lot"]))
+            msgs.append("2nd order:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f" % (orders[1]["symbol"], orders[1]["side"], orders[1]["price"], orders[1]["lot"], orders[1]["base_lot"], orders[1]["final_lot"]))
+            msgs.append("3rd order:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f" % (orders[2]["symbol"], orders[2]["side"], orders[2]["price"], orders[2]["lot"], orders[2]["base_lot"], orders[2]["final_lot"]))
+
+            expected_revenue = orders[2]["final_lot"] * orders[2]["price"] - orders[0]["final_lot"] * orders[0]["price"]
+            msgs.append("Expected Revenue:%0.8f%s    1st lot(%0.8f(%0.8f%s)) => 3rd lot(%0.8f(%0.8f%s))" % (
+                expected_revenue,
+                base_currency_name,
+                orders[0]["final_lot"],
+                orders[0]["final_lot"] * orders[0]["price"],
+                base_currency_name,
+                orders[2]["final_lot"],
+                orders[2]["final_lot"] * orders[2]["price"],
+                base_currency_name,
+            ))
+            expected_fee = (lambda x: x - x * (1 - self.binance.comission_fee)**3)(orders[0]["final_lot"] * orders[0]["price"])
+            msgs.append("Expected fee:%0.8f%s" % (expected_fee, base_currency_name))
+            msgs.append("Expected Final Revenue:%0.8f%s" % (expected_revenue, base_currency_name))
+
+            for msg in msgs:
+                applog.info(msg)
 
             if dryrun:
                 continue

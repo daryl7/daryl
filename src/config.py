@@ -8,7 +8,13 @@ class Config:
             return config["log"]["applog"]["level"]
 
     @staticmethod
-    def get_applog_filepath():
+    def get_log_dir():
         with open('config.yml', 'r') as yml:
             config = yaml.load(yml)
-            return config["log"]["applog"]["filepath"]
+            return config["log"]["applog"]["logdir"]
+
+    @staticmethod
+    def get_triangular_asset():
+        with open('config.yml', 'r') as yml:
+            config = yaml.load(yml)
+            return config["triangular"]["asset"]

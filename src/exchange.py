@@ -267,6 +267,8 @@ class Binance:
     def __init__(self, *args, **kwargs):
         self.client = binance.client.Client(config['binance']['api_key'], config['binance']['api_secret'])
         self.comission_fee = config['binance']['comission_fee']
+        self.all_ticker_hash = {}
+        self.exchange_info_hash = {}
 
     @staticmethod
     def __urlopen_public(method, path, *, param={}):
@@ -287,7 +289,26 @@ class Binance:
     def refresh_ticker_all(self):
         with Binance.__urlopen_public("GET", "/api/v3/ticker/bookTicker") as res:
             html = res.read().decode("utf-8")
-        return json.loads(html)
+        j = json.loads(html)
+        for currency in j:
+            self.all_ticker_hash[currency["symbol"]] = currency
+        return self.all_ticker_hash
+
+    def refresh_exchange_info(self):
+        with Binance.__urlopen_public("GET", "/api/v1/exchangeInfo") as res:
+            html = res.read().decode("utf-8")
+        j = json.loads(html)
+        self.exchange_info_hash = {}
+        for symbol in j["symbols"]:
+            filters = {}
+            for filter in symbol["filters"]:
+                filters[filter["filterType"]] = filter
+            symbol["filters"] = filters
+            self.exchange_info_hash[symbol["symbol"]] = symbol
+
+    def lot_filter(self, symbol, lot):
+        minQty = float(self.exchange_info_hash[symbol]["filters"]["LOT_SIZE"]["minQty"])
+        return lot - lot % minQty
 
     def health_check(self, dryrun):
         # TODO: implement

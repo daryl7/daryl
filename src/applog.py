@@ -1,11 +1,14 @@
 import logging
 from config import Config
+import os
 
-logging.basicConfig(
-    level = Config.get_applog_level(),
-    filename = Config.get_applog_filepath(),
-    filemode = 'a',
-    format='%(asctime)s %(levelname)s %(message)s')
+
+def init(logname):
+    logging.basicConfig(
+        level = Config.get_applog_level(),
+        filename = Config.get_log_dir() + "/" + logname + ".log",
+        filemode = 'a',
+        format='%(asctime)s %(levelname)s %(message)s')
 
 def error(message):
     print(message)

@@ -166,6 +166,7 @@ class Trader:
                 time.sleep(3)
 
 if __name__ == '__main__':
+    applog.init("app")
 
     if len(sys.argv) > 1 and sys.argv[1] in {"RealTrade", "DemoTrade", "Batch"}:
         run_mode = sys.argv[1]

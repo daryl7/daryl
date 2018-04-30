@@ -210,7 +210,7 @@ class Triangular:
                 print("Total must be at latest %f%s. (via_lot = %0.8f)" % (self.__get_lower_limit(via_currency_name, False), via_currency_name, via_lot))
                 continue
 
-            msgs = []
+            msgs = [""]
             msgs.append("1st order:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f" % (orders[0]["symbol"], orders[0]["side"], orders[0]["price"], orders[0]["lot"], orders[0]["base_lot"], orders[0]["final_lot"]))
             msgs.append("2nd order:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f" % (orders[1]["symbol"], orders[1]["side"], orders[1]["price"], orders[1]["lot"], orders[1]["base_lot"], orders[1]["final_lot"]))
             msgs.append("3rd order:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f" % (orders[2]["symbol"], orders[2]["side"], orders[2]["price"], orders[2]["lot"], orders[2]["base_lot"], orders[2]["final_lot"]))

@@ -18,3 +18,9 @@ class Config:
         with open('config.yml', 'r') as yml:
             config = yaml.load(yml)
             return config["triangular"]["asset"]
+
+    @staticmethod
+    def get_triangular_profit_lower_limit():
+        with open('config.yml', 'r') as yml:
+            config = yaml.load(yml)
+            return config["triangular"]["profit_lower_limit"]

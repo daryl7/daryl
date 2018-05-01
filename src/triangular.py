@@ -22,6 +22,7 @@ class Triangular:
         self.tsv_filepath = "./log/triangular.tsv"
         self.only_binance_tsv_filepath = "./log/triangular_only_binance.tsv"
         self.interval = 3
+        self.profit_lower_limit = Config.get_triangular_profit_lower_limit()
 
     def log(self, row, exchange):
         record = "\t".join(row)
@@ -45,6 +46,12 @@ class Triangular:
                 applog.error("mailer not activation!")
                 sys.exit()
 
+        applog.info("========================================")
+        applog.info("Start Triangular Arbitrage. RunMode = " + run_mode)
+        applog.info("binance.comission_fee: %0.8f" % self.binance.comission_fee)
+        applog.info("profit_lower_limit: %0.8f" % self.profit_lower_limit)
+        applog.info("========================================")
+
         self.binance.refresh_exchange_info()
 
         while True:
@@ -67,7 +74,9 @@ class Triangular:
                     if r >=0:
                         total += 2
                         hope += r
-                self.trade_binance(triangle_orders, dryrun)
+                triangle_order = self.choice_order(triangle_orders)
+                if triangle_order is not None:
+                    self.trade_binance(triangle_order, dryrun)
 
             if is_poloniex:
                 j = self.poloniex.refresh_ticker_all()
@@ -165,158 +174,162 @@ class Triangular:
         else:
             return -1
 
-    def trade_binance(self, triangle_orders, dryrun):
-        mailer = Mailer()
+    def choice_order(self, triangle_orders):
         for triangle_order in triangle_orders:
             rate = float(triangle_order[3])
-            if rate - 1 < 0.003:
-                print("Profits too small. rate=%s" % rate) 
-                continue
+            if rate - 1 >= self.profit_lower_limit:
+                return triangle_order
+            else:
+                print("Profits too small. rate=%s" % rate)
+        return None
 
-            route = triangle_order[2]
-            base_currency_name = route[:3]
-            viasymbole = triangle_order[8].split(":")[0]
-            via_currency_name = viasymbole[len(viasymbole)-3:]
-            orders = [
-                {
-                    "symbol": triangle_order[4].split(":")[0],
-                    "side": triangle_order[4].split(":")[1],
-                    "price": float(triangle_order[5]),
-                    "lot": float(triangle_order[6]),
-                    "base_lot": float(triangle_order[7]),
-                },
-                {
-                    "symbol": triangle_order[8].split(":")[0],
-                    "side": triangle_order[8].split(":")[1],
-                    "price": float(triangle_order[9]),
-                    "lot": float(triangle_order[10]),
-                    "base_lot": float(triangle_order[11]),
-                },
-                {
-                    "symbol": triangle_order[12].split(":")[0],
-                    "side": triangle_order[12].split(":")[1],
-                    "price": float(triangle_order[13]),
-                    "lot": float(triangle_order[14]),
-                    "base_lot": float(triangle_order[15]),
-                },
-            ]
+    def trade_binance(self, triangle_order, dryrun):
+        mailer = Mailer()
 
-            min_base_lot = min([orders[0]["base_lot"], orders[1]["base_lot"], orders[2]["base_lot"]]) * 0.5 # risk hedge
-            min_base_lot = min(min_base_lot, self.__get_asset_lot(base_currency_name))
+        route = triangle_order[2]
+        base_currency_name = route[:3]
+        viasymbole = triangle_order[8].split(":")[0]
+        via_currency_name = viasymbole[len(viasymbole)-3:]
+        orders = [
+            {
+                "symbol": triangle_order[4].split(":")[0],
+                "side": triangle_order[4].split(":")[1],
+                "price": float(triangle_order[5]),
+                "lot": float(triangle_order[6]),
+                "base_lot": float(triangle_order[7]),
+            },
+            {
+                "symbol": triangle_order[8].split(":")[0],
+                "side": triangle_order[8].split(":")[1],
+                "price": float(triangle_order[9]),
+                "lot": float(triangle_order[10]),
+                "base_lot": float(triangle_order[11]),
+            },
+            {
+                "symbol": triangle_order[12].split(":")[0],
+                "side": triangle_order[12].split(":")[1],
+                "price": float(triangle_order[13]),
+                "lot": float(triangle_order[14]),
+                "base_lot": float(triangle_order[15]),
+            },
+        ]
 
-            if min_base_lot < self.__get_lower_limit(base_currency_name, True):
-                print("Total must be at latest %f%s. (min_base_lot = %0.8f)" % (self.__get_lower_limit(base_currency_name, True), base_currency_name, min_base_lot))
-                continue
+        min_base_lot = min([orders[0]["base_lot"], orders[1]["base_lot"], orders[2]["base_lot"]]) * 0.5 # risk hedge
+        min_base_lot = min(min_base_lot, self.__get_asset_lot(base_currency_name))
 
-            orders[0]["final_lot"] = self.binance.lot_filter(orders[0]["symbol"], orders[0]["lot"] * min_base_lot / orders[0]["base_lot"])
-            if orders[1]["side"] == "BUY":
-                orders[1]["final_lot"] = self.binance.lot_filter(orders[1]["symbol"], orders[0]["final_lot"] / orders[1]["price"])
-            elif orders[1]["side"] == "SELL":
-                orders[1]["final_lot"] = self.binance.lot_filter(orders[1]["symbol"], orders[0]["final_lot"] * orders[1]["price"])
-            orders[2]["final_lot"] = orders[1]["final_lot"]
+        if min_base_lot < self.__get_lower_limit(base_currency_name, True):
+            print("Total must be at latest %f%s. (min_base_lot = %0.8f)" % (self.__get_lower_limit(base_currency_name, True), base_currency_name, min_base_lot))
+            return
 
-            via_lot = orders[1]["final_lot"] * orders[1]["price"]
-            if via_lot < self.__get_lower_limit(via_currency_name, False):
-                print("Total must be at latest %f%s. (via_lot = %0.8f)" % (self.__get_lower_limit(via_currency_name, False), via_currency_name, via_lot))
-                continue
+        orders[0]["final_lot"] = self.binance.lot_filter(orders[0]["symbol"], orders[0]["lot"] * min_base_lot / orders[0]["base_lot"])
+        if orders[1]["side"] == "BUY":
+            orders[1]["final_lot"] = self.binance.lot_filter(orders[1]["symbol"], orders[0]["final_lot"] / orders[1]["price"])
+        elif orders[1]["side"] == "SELL":
+            orders[1]["final_lot"] = self.binance.lot_filter(orders[1]["symbol"], orders[0]["final_lot"] * orders[1]["price"])
+        orders[2]["final_lot"] = orders[1]["final_lot"]
 
-            msgs = [""]
+        via_lot = orders[1]["final_lot"] * orders[1]["price"]
+        if via_lot < self.__get_lower_limit(via_currency_name, False):
+            print("Total must be at latest %f%s. (via_lot = %0.8f)" % (self.__get_lower_limit(via_currency_name, False), via_currency_name, via_lot))
+            return
 
-            expected_revenue = orders[2]["final_lot"] * orders[2]["price"] - orders[0]["final_lot"] * orders[0]["price"]
-            expected_fee = (lambda x: x - x * (1 - self.binance.comission_fee)**3)(orders[0]["final_lot"] * orders[0]["price"])
+        msgs = [""]
 
-            msgs.append("[beta] %d JPY" % ((expected_revenue - expected_fee) * 1000000))
-            msgs.append("Expected Final Revenue:%0.8f%s" % (expected_revenue - expected_fee, base_currency_name))
-            msgs.append("Expected fee:%0.8f%s" % (expected_fee, base_currency_name))
-            msgs.append("Expected Revenue:%0.8f%s    1st lot(%0.8f(%0.8f%s)) => 3rd lot(%0.8f(%0.8f%s))" % (
-                expected_revenue,
-                base_currency_name,
-                orders[0]["final_lot"],
-                orders[0]["final_lot"] * orders[0]["price"],
-                base_currency_name,
-                orders[2]["final_lot"],
-                orders[2]["final_lot"] * orders[2]["price"],
-                base_currency_name,
-            ))
-            msgs.append("")
-            msgs.append("1st order:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f" % (orders[0]["symbol"], orders[0]["side"], orders[0]["price"], orders[0]["lot"], orders[0]["base_lot"], orders[0]["final_lot"]))
-            msgs.append("2nd order:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f" % (orders[1]["symbol"], orders[1]["side"], orders[1]["price"], orders[1]["lot"], orders[1]["base_lot"], orders[1]["final_lot"]))
-            msgs.append("3rd order:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f" % (orders[2]["symbol"], orders[2]["side"], orders[2]["price"], orders[2]["lot"], orders[2]["base_lot"], orders[2]["final_lot"]))
+        expected_revenue = orders[2]["final_lot"] * orders[2]["price"] - orders[0]["final_lot"] * orders[0]["price"]
+        expected_fee = (lambda x: x - x * (1 - self.binance.comission_fee)**3)(orders[0]["final_lot"] * orders[0]["price"])
 
-            for msg in msgs:
-                applog.info(msg)
+        msgs.append("[beta] %d JPY" % ((expected_revenue - expected_fee) * 1000000))
+        msgs.append("Expected Final Revenue:%0.8f%s" % (expected_revenue - expected_fee, base_currency_name))
+        msgs.append("Expected fee:%0.8f%s" % (expected_fee, base_currency_name))
+        msgs.append("Expected Revenue:%0.8f%s    1st lot(%0.8f(%0.8f%s)) => 3rd lot(%0.8f(%0.8f%s))" % (
+            expected_revenue,
+            base_currency_name,
+            orders[0]["final_lot"],
+            orders[0]["final_lot"] * orders[0]["price"],
+            base_currency_name,
+            orders[2]["final_lot"],
+            orders[2]["final_lot"] * orders[2]["price"],
+            base_currency_name,
+        ))
+        msgs.append("")
+        msgs.append("1st order:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f" % (orders[0]["symbol"], orders[0]["side"], orders[0]["price"], orders[0]["lot"], orders[0]["base_lot"], orders[0]["final_lot"]))
+        msgs.append("2nd order:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f" % (orders[1]["symbol"], orders[1]["side"], orders[1]["price"], orders[1]["lot"], orders[1]["base_lot"], orders[1]["final_lot"]))
+        msgs.append("3rd order:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f" % (orders[2]["symbol"], orders[2]["side"], orders[2]["price"], orders[2]["lot"], orders[2]["base_lot"], orders[2]["final_lot"]))
 
-            mailer.sendmail("\n".join(msgs), "%s - Create order - Daryl Triangular" % route)
+        for msg in msgs:
+            applog.info(msg)
 
-            if dryrun:
-                continue
+        mailer.sendmail("\n".join(msgs), "%s - Create order - Daryl Triangular" % route)
 
-            order_count = 0
-            for order in orders:
-                r = self.binance.order(
-                    order["symbol"],
-                    order["side"],
-                    binance.client.Client.ORDER_TYPE_LIMIT,
-                    binance.client.Client.TIME_IN_FORCE_GTC,
-                    order["final_lot"],
-                    "%0.8f" % order["price"],
-                )
-                applog.info("binance.create_order" + str(r))
-                i = 0
-                while True:
-                    try:
-                        r = self.binance.get_order(r["symbol"], r["orderId"])
-                    except BinanceAPIException as e:
-                        if e.status_code == -2013:   # NO_SUCH_ORDER
-                            applog.info("BinanceAPIException: Order does not exist. (%d)" % i)
-                            if i < 30:
-                                time.sleep(0.001)
-                            else:
-                                time.sleep(10)
-                            i += 1
-                            continue
+        if dryrun:
+            return
 
-                    if r["status"] == binance.client.Client.ORDER_STATUS_FILLED:
-                        applog.info("filled.")
-                        order_count += 1
-                        break
-                    elif r["status"] in [
-                        binance.client.Client.ORDER_STATUS_NEW,
-                        binance.client.Client.ORDER_STATUS_PARTIALLY_FILLED,
-                    ]:
-                        applog.info("%s,%s,order_count:%d,price:%s,lot:%s,status:%s(%d)" % (r["symbol"], r["side"], order_count, r["price"], r["origQty"], r["status"], i))
+        order_count = 0
+        for order in orders:
+            r = self.binance.order(
+                order["symbol"],
+                order["side"],
+                binance.client.Client.ORDER_TYPE_LIMIT,
+                binance.client.Client.TIME_IN_FORCE_GTC,
+                order["final_lot"],
+                "%0.8f" % order["price"],
+            )
+            applog.info("binance.create_order" + str(r))
+            i = 0
+            while True:
+                try:
+                    r = self.binance.get_order(r["symbol"], r["orderId"])
+                except BinanceAPIException as e:
+                    if e.status_code == -2013:   # NO_SUCH_ORDER
+                        applog.info("BinanceAPIException: Order does not exist. (%d)" % i)
                         if i < 30:
                             time.sleep(0.001)
-                        elif i < 100:
-                            if order_count == 0 and r["status"] == binance.client.Client.ORDER_STATUS_NEW:
-                                applog.warning("Skip triangular arbitrage. status=" + r["status"])
-                                cancel_result = self.binance.cancel_order(r["symbol"], r["orderId"])
-                                applog.info("Canceled. result=" + str(cancel_result))
-                                mailer.sendmail("%s,%s" % (r["symbol"], r["orderId"]), "Canceled - Daryl Triangular")
-                                break
-                            time.sleep(0.01)
                         else:
                             time.sleep(10)
                         i += 1
-                    else:
-                        # binance.client.Client.ORDER_STATUS_CANCELED
-                        # binance.client.Client.ORDER_STATUS_EXPIRED
-                        # binance.client.Client.ORDER_STATUS_PENDING_CANCEL
-                        # binance.client.Client.ORDER_STATUS_REJECTED
-                        if order_count == 0:
+                        continue
+
+                if r["status"] == binance.client.Client.ORDER_STATUS_FILLED:
+                    applog.info("filled.")
+                    order_count += 1
+                    break
+                elif r["status"] in [
+                    binance.client.Client.ORDER_STATUS_NEW,
+                    binance.client.Client.ORDER_STATUS_PARTIALLY_FILLED,
+                ]:
+                    applog.info("%s,%s,order_count:%d,price:%s,lot:%s,status:%s(%d)" % (r["symbol"], r["side"], order_count, r["price"], r["origQty"], r["status"], i))
+                    if i < 30:
+                        time.sleep(0.001)
+                    elif i < 100:
+                        if order_count == 0 and r["status"] == binance.client.Client.ORDER_STATUS_NEW:
                             applog.warning("Skip triangular arbitrage. status=" + r["status"])
                             cancel_result = self.binance.cancel_order(r["symbol"], r["orderId"])
                             applog.info("Canceled. result=" + str(cancel_result))
                             mailer.sendmail("%s,%s" % (r["symbol"], r["orderId"]), "Canceled - Daryl Triangular")
                             break
-                        else:
-                            applog.error("Failed triangular arbitrage. status=" + r["status"])
-                            mailer.sendmail("%s,%s" % (r["symbol"], r["orderId"]), "Failed - Daryl Triangular")
-                            break
-                if order_count == 0:
-                    break
-            if order_count == 3:
-                mailer.sendmail(route, "Successful - Daryl Triangular")
+                        time.sleep(0.01)
+                    else:
+                        time.sleep(10)
+                    i += 1
+                else:
+                    # binance.client.Client.ORDER_STATUS_CANCELED
+                    # binance.client.Client.ORDER_STATUS_EXPIRED
+                    # binance.client.Client.ORDER_STATUS_PENDING_CANCEL
+                    # binance.client.Client.ORDER_STATUS_REJECTED
+                    if order_count == 0:
+                        applog.warning("Skip triangular arbitrage. status=" + r["status"])
+                        cancel_result = self.binance.cancel_order(r["symbol"], r["orderId"])
+                        applog.info("Canceled. result=" + str(cancel_result))
+                        mailer.sendmail("%s,%s" % (r["symbol"], r["orderId"]), "Canceled - Daryl Triangular")
+                        break
+                    else:
+                        applog.error("Failed triangular arbitrage. status=" + r["status"])
+                        mailer.sendmail("%s,%s" % (r["symbol"], r["orderId"]), "Failed - Daryl Triangular")
+                        break
+            if order_count == 0:
+                break
+        if order_count == 3:
+            mailer.sendmail(route, "Successful - Daryl Triangular")
 
 
     @staticmethod

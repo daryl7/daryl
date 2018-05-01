@@ -228,7 +228,7 @@ class Triangular:
             ))
             expected_fee = (lambda x: x - x * (1 - self.binance.comission_fee)**3)(orders[0]["final_lot"] * orders[0]["price"])
             msgs.append("Expected fee:%0.8f%s" % (expected_fee, base_currency_name))
-            msgs.append("Expected Final Revenue:%0.8f%s" % (expected_revenue, base_currency_name))
+            msgs.append("Expected Final Revenue:%0.8f%s" % (expected_revenue - expected_fee, base_currency_name))
 
             for msg in msgs:
                 applog.info(msg)
@@ -267,7 +267,7 @@ class Triangular:
                                 break
                             time.sleep(0.01)
                         else:
-                            time.sleep(3)
+                            time.sleep(10)
                         i += 1
                     else:
                         # binance.client.Client.ORDER_STATUS_CANCELED
@@ -279,7 +279,7 @@ class Triangular:
                             break
                         else:
                             applog.error("Failed triangular arbitrage. status=" + r["status"])
-                            raise "Failed triangular arbitrage."
+                            break
                 if order_count == 0:
                     break
 

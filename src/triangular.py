@@ -249,7 +249,18 @@ class Triangular:
                 applog.info("binance.create_order" + str(r))
                 i = 0
                 while True:
-                    r = self.binance.get_order(r["symbol"], r["orderId"])
+                    try:
+                        r = self.binance.get_order(r["symbol"], r["orderId"])
+                    except BinanceAPIException as e:
+                        if e.status_code == -2013:   # NO_SUCH_ORDER
+                            applog.info("BinanceAPIException: Order does not exist. (%d)" % i)
+                            if i < 30:
+                                time.sleep(0.001)
+                            else:
+                                time.sleep(10)
+                            i += 1
+                            continue
+
                     if r["status"] == binance.client.Client.ORDER_STATUS_FILLED:
                         applog.info("filled.")
                         order_count += 1

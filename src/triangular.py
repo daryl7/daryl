@@ -4,6 +4,7 @@ import json
 from datetime import datetime
 import sys
 import binance.client
+from binance.exceptions import BinanceAPIException
 import os
 import applog
 from config import Config

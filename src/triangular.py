@@ -8,6 +8,7 @@ from binance.exceptions import BinanceAPIException
 import os
 import applog
 from config import Config
+from mailer import Mailer
 
 
 def str8(v):
@@ -37,6 +38,12 @@ class Triangular:
             dryrun = False
         else:
             dryrun = True
+
+        mailer = Mailer()
+        if mailer.is_use():
+            if not mailer.checkmailer():
+                applog.error("mailer not activation!")
+                sys.exit()
 
         self.binance.refresh_exchange_info()
 
@@ -159,13 +166,15 @@ class Triangular:
             return -1
 
     def trade_binance(self, triangle_orders, dryrun):
+        mailer = Mailer()
         for triangle_order in triangle_orders:
             rate = float(triangle_order[3])
             if rate - 1 < 0.003:
                 print("Profits too small. rate=%s" % rate) 
                 continue
 
-            base_currency_name = triangle_order[2][:3]
+            route = triangle_order[2]
+            base_currency_name = route[:3]
             viasymbole = triangle_order[8].split(":")[0]
             via_currency_name = viasymbole[len(viasymbole)-3:]
             orders = [
@@ -212,11 +221,13 @@ class Triangular:
                 continue
 
             msgs = [""]
-            msgs.append("1st order:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f" % (orders[0]["symbol"], orders[0]["side"], orders[0]["price"], orders[0]["lot"], orders[0]["base_lot"], orders[0]["final_lot"]))
-            msgs.append("2nd order:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f" % (orders[1]["symbol"], orders[1]["side"], orders[1]["price"], orders[1]["lot"], orders[1]["base_lot"], orders[1]["final_lot"]))
-            msgs.append("3rd order:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f" % (orders[2]["symbol"], orders[2]["side"], orders[2]["price"], orders[2]["lot"], orders[2]["base_lot"], orders[2]["final_lot"]))
 
             expected_revenue = orders[2]["final_lot"] * orders[2]["price"] - orders[0]["final_lot"] * orders[0]["price"]
+            expected_fee = (lambda x: x - x * (1 - self.binance.comission_fee)**3)(orders[0]["final_lot"] * orders[0]["price"])
+
+            msgs.append("[beta] %d JPY" % ((expected_revenue - expected_fee) * 1000000))
+            msgs.append("Expected Final Revenue:%0.8f%s" % (expected_revenue - expected_fee, base_currency_name))
+            msgs.append("Expected fee:%0.8f%s" % (expected_fee, base_currency_name))
             msgs.append("Expected Revenue:%0.8f%s    1st lot(%0.8f(%0.8f%s)) => 3rd lot(%0.8f(%0.8f%s))" % (
                 expected_revenue,
                 base_currency_name,
@@ -227,12 +238,15 @@ class Triangular:
                 orders[2]["final_lot"] * orders[2]["price"],
                 base_currency_name,
             ))
-            expected_fee = (lambda x: x - x * (1 - self.binance.comission_fee)**3)(orders[0]["final_lot"] * orders[0]["price"])
-            msgs.append("Expected fee:%0.8f%s" % (expected_fee, base_currency_name))
-            msgs.append("Expected Final Revenue:%0.8f%s" % (expected_revenue - expected_fee, base_currency_name))
+            msgs.append("")
+            msgs.append("1st order:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f" % (orders[0]["symbol"], orders[0]["side"], orders[0]["price"], orders[0]["lot"], orders[0]["base_lot"], orders[0]["final_lot"]))
+            msgs.append("2nd order:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f" % (orders[1]["symbol"], orders[1]["side"], orders[1]["price"], orders[1]["lot"], orders[1]["base_lot"], orders[1]["final_lot"]))
+            msgs.append("3rd order:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f" % (orders[2]["symbol"], orders[2]["side"], orders[2]["price"], orders[2]["lot"], orders[2]["base_lot"], orders[2]["final_lot"]))
 
             for msg in msgs:
                 applog.info(msg)
+
+            mailer.sendmail("\n".join(msgs), "%s - Create order - Daryl Triangular" % route)
 
             if dryrun:
                 continue
@@ -278,6 +292,7 @@ class Triangular:
                                 applog.warning("Skip triangular arbitrage. status=" + r["status"])
                                 cancel_result = self.binance.cancel_order(r["symbol"], r["orderId"])
                                 applog.info("Canceled. result=" + str(cancel_result))
+                                mailer.sendmail("%s,%s" % (r["symbol"], r["orderId"]), "Canceled - Daryl Triangular")
                                 break
                             time.sleep(0.01)
                         else:
@@ -292,12 +307,16 @@ class Triangular:
                             applog.warning("Skip triangular arbitrage. status=" + r["status"])
                             cancel_result = self.binance.cancel_order(r["symbol"], r["orderId"])
                             applog.info("Canceled. result=" + str(cancel_result))
+                            mailer.sendmail("%s,%s" % (r["symbol"], r["orderId"]), "Canceled - Daryl Triangular")
                             break
                         else:
                             applog.error("Failed triangular arbitrage. status=" + r["status"])
+                            mailer.sendmail("%s,%s" % (r["symbol"], r["orderId"]), "Failed - Daryl Triangular")
                             break
                 if order_count == 0:
                     break
+            if order_count == 3:
+                mailer.sendmail(route, "Successful - Daryl Triangular")
 
 
     @staticmethod

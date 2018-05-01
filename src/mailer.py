@@ -12,6 +12,8 @@ class Mailer:
         self.notification_email_subject = config['notifycation']['email']['subject']
 
     def sendmail(self, message, subject = ""):
+        if not self.is_use():
+            return
         you = self.notification_email_to
         me = self.notification_email_from
         msg = MIMEText(message)
@@ -22,3 +24,15 @@ class Mailer:
         s.connect()
         s.sendmail(me, [you], msg.as_string())
         s.close()
+
+    def checkmailer(self):
+        s = smtplib.SMTP()
+        try:
+            s.connect()
+            s.close()
+        except ConnectionRefusedError:
+            return False
+        return True
+
+    def is_use(self):
+        return not self.notification_email_to == ""

@@ -238,18 +238,18 @@ class Triangular:
 
             order_count = 0
             for order in orders:
-                r = self.binance.client.create_order(
-                    symbol = order["symbol"],
-                    side = order["side"],
-                    type = binance.client.Client.ORDER_TYPE_LIMIT,
-                    timeInForce = binance.client.Client.TIME_IN_FORCE_GTC,
-                    quantity = order["final_lot"],
-                    price = "%0.8f" % order["price"],
+                r = self.binance.order(
+                    order["symbol"],
+                    order["side"],
+                    binance.client.Client.ORDER_TYPE_LIMIT,
+                    binance.client.Client.TIME_IN_FORCE_GTC,
+                    order["final_lot"],
+                    "%0.8f" % order["price"],
                 )
                 applog.info("binance.create_order" + str(r))
                 i = 0
                 while True:
-                    r = self.binance.client.get_order(symbol = r["symbol"], orderId = r["orderId"])
+                    r = self.binance.get_order(r["symbol"], r["orderId"])
                     if r["status"] == binance.client.Client.ORDER_STATUS_FILLED:
                         applog.info("filled.")
                         order_count += 1

@@ -348,6 +348,19 @@ class Binance:
         self.last_sell_comission = round(lot * self.comission_fee, 8)
         return "\tsell_order: Binance, " + str(price) + ", " + str(lot)
 
+    def order(self, symbol, side, _type, time_in_force, lot, price):
+        return self.client.create_order(
+            symbol = symbol,
+            side = side,
+            type = _type,
+            timeInForce = time_in_force,
+            quantity = lot,
+            price = price,
+        )
+
+    def get_order(self, symbol, order_id):
+        return self.client.get_order(symbol = symbol, orderId = order_id)
+
 
 class Poloniex:
     __api_endpoint = "https://poloniex.com"

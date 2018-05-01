@@ -361,6 +361,9 @@ class Binance:
     def get_order(self, symbol, order_id):
         return self.client.get_order(symbol = symbol, orderId = order_id)
 
+    def cancel_order(self, symbol, order_id):
+        return self.client.cancel_order(symbol = symbol, orderId = order_id)
+
 
 class Poloniex:
     __api_endpoint = "https://poloniex.com"

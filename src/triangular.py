@@ -276,6 +276,8 @@ class Triangular:
                         elif i < 100:
                             if order_count == 0 and r["status"] == binance.client.Client.ORDER_STATUS_NEW:
                                 applog.warning("Skip triangular arbitrage. status=" + r["status"])
+                                cancel_result = self.binance.cancel_order(r["symbol"], r["orderId"])
+                                applog.info("Canceled. result=" + str(cancel_result))
                                 break
                             time.sleep(0.01)
                         else:
@@ -288,6 +290,8 @@ class Triangular:
                         # binance.client.Client.ORDER_STATUS_REJECTED
                         if order_count == 0:
                             applog.warning("Skip triangular arbitrage. status=" + r["status"])
+                            cancel_result = self.binance.cancel_order(r["symbol"], r["orderId"])
+                            applog.info("Canceled. result=" + str(cancel_result))
                             break
                         else:
                             applog.error("Failed triangular arbitrage. status=" + r["status"])

@@ -194,7 +194,7 @@ class BitFlyer:
                     break
         return [child_order_acceptance_id, commission]
 
-    def buy_order(self, dryrun):
+    def buy_order_from_available_balance(self, dryrun):
         price = self.ask + config['trader']['order_offset_jpy']
         lot = round(Context.get_bitflyer_jpy() / float(price), 8)
         if not dryrun:
@@ -217,7 +217,7 @@ class BitFlyer:
         self.last_buy_commission = commission
         return "\tbuy_order:BitFlyer, price:" + str(price) + ", lot:" + str(lot) + ", commission:" + str(commission) + ", child_order_acceptance_id:" + child_order_acceptance_id
 
-    def sell_order(self, dryrun):
+    def sell_order_from_available_balance(self, dryrun):
         price = self.bid - config['trader']['order_offset_jpy']
         lot = Context.get_bitflyer_btc()
         if not dryrun:
@@ -314,7 +314,7 @@ class Binance:
         # TODO: implement
         return True
 
-    def buy_order(self, dryrun):
+    def buy_order_from_available_balance(self, dryrun):
         price = self.ask + config['trader']['order_offset_usd']
         lot = round(Context.get_binance_usd() / float(price), 6)
         if(not dryrun):
@@ -331,7 +331,7 @@ class Binance:
         self.last_buy_comission = round(lot * self.comission_fee, 8)
         return "\tbuy_order: Binance, " + str(price) + ", " + str(lot)
 
-    def sell_order(self, dryrun):
+    def sell_order_from_available_balance(self, dryrun):
         price = self.bid - config['trader']['order_offset_usd']
         lot = Context.get_binance_btc()
         if(not dryrun):

@@ -68,8 +68,8 @@ class Trader:
 
     def order(self, monitor, buying_exchange, selling_exchange, diff, dryrun):
         message1 = selling_exchange.__class__.__name__ + "->" + buying_exchange.__class__.__name__ + "(" + monitor.dt + ", diff:" + str(diff) + ")"
-        message2 = buying_exchange.buy_order(dryrun)
-        message3 = selling_exchange.sell_order(dryrun)
+        message2 = buying_exchange.buy_order_from_available_balance(dryrun)
+        message3 = selling_exchange.sell_order_from_available_balance(dryrun)
         applog.info(message1)
         applog.info(message2)
         applog.info(message3)

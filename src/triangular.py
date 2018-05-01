@@ -59,18 +59,18 @@ class Triangular:
             hope = 0
 
             if is_binance:
-                hash = self.binance.refresh_ticker_all()
+                book_ticker_hash = self.binance.refresh_ticker_all()
                 triangle_orders = []
-                for symbol in hash:
-                    r = self.triangle_all_check(triangle_orders, "Binance", "BTC", "ETH", symbol, hash, self.binance.comission_fee, dryrun)
+                for symbol in book_ticker_hash:
+                    r = self.triangle_all_check(triangle_orders, "Binance", "BTC", "ETH", symbol, book_ticker_hash, self.binance.comission_fee, dryrun)
                     if r >=0:
                         total += 2
                         hope += r
-                    r = self.triangle_all_check(triangle_orders, "Binance", "BTC", "BNB", symbol, hash, self.binance.comission_fee, dryrun)
+                    r = self.triangle_all_check(triangle_orders, "Binance", "BTC", "BNB", symbol, book_ticker_hash, self.binance.comission_fee, dryrun)
                     if r >=0:
                         total += 2
                         hope += r
-                    r = self.triangle_all_check(triangle_orders, "Binance", "ETH", "BNB", symbol, hash, self.binance.comission_fee, dryrun)
+                    r = self.triangle_all_check(triangle_orders, "Binance", "ETH", "BNB", symbol, book_ticker_hash, self.binance.comission_fee, dryrun)
                     if r >=0:
                         total += 2
                         hope += r
@@ -80,35 +80,35 @@ class Triangular:
 
             if is_poloniex:
                 j = self.poloniex.refresh_ticker_all()
-                hash ={}
+                book_ticker_hash ={}
                 for symbol in j:
                     r = symbol.split("_")
                     newsymbol = r[1] + r[0]
-                    hash[newsymbol] = {
+                    book_ticker_hash[newsymbol] = {
                         "askPrice": j[symbol]["lowestAsk"],
                         "askQty": -1,
                         "bidPrice": j[symbol]["highestBid"],
                         "bidQty": -1
                     }
                 triangle_orders = []
-                for symbol in hash:
-                    r = self.triangle_all_check(triangle_orders, "Poloniex", "BTC", "ETH", symbol, hash, 0.0025, dryrun)
+                for symbol in book_ticker_hash:
+                    r = self.triangle_all_check(triangle_orders, "Poloniex", "BTC", "ETH", symbol, book_ticker_hash, 0.0025, dryrun)
                     if r >=0:
                         total += 2
                         hope += r
-                    r = self.triangle_all_check(triangle_orders, "Poloniex", "BTC", "XMR", symbol, hash, 0.0025, dryrun)
+                    r = self.triangle_all_check(triangle_orders, "Poloniex", "BTC", "XMR", symbol, book_ticker_hash, 0.0025, dryrun)
                     if r >=0:
                         total += 2
                         hope += r
-                    r = self.triangle_all_check(triangle_orders, "Poloniex", "ETH", "XMR", symbol, hash, 0.0025, dryrun)
+                    r = self.triangle_all_check(triangle_orders, "Poloniex", "ETH", "XMR", symbol, book_ticker_hash, 0.0025, dryrun)
                     if r >=0:
                         total += 2
                         hope += r
-                    r = self.triangle_all_check(triangle_orders, "Poloniex", "USDT", "BTC", symbol, hash, 0.0025, dryrun)
+                    r = self.triangle_all_check(triangle_orders, "Poloniex", "USDT", "BTC", symbol, book_ticker_hash, 0.0025, dryrun)
                     if r >=0:
                         total += 2
                         hope += r
-                    r = self.triangle_all_check(triangle_orders, "Poloniex", "USDT", "ETH", symbol, hash, 0.0025, dryrun)
+                    r = self.triangle_all_check(triangle_orders, "Poloniex", "USDT", "ETH", symbol, book_ticker_hash, 0.0025, dryrun)
                     if r >=0:
                         total += 2
                         hope += r
@@ -117,33 +117,33 @@ class Triangular:
             print("hope/total = " + str(hope) + "/" + str(total))
             time.sleep(self.interval)
 
-    def triangle_all_check(self, triangle_orders, exchange_name, base_currency_name, via_currency_name, symbol, hash, fee, dryrun):
+    def triangle_all_check(self, triangle_orders, exchange_name, base_currency_name, via_currency_name, symbol, book_ticker_hash, fee, dryrun):
         i = symbol.find(via_currency_name)
         if not (i == -1 or i == 0):
             currency_name = symbol[0:len(symbol) - len(via_currency_name)]
-            btcpair_symbol = currency_name + base_currency_name
+            basepair_symbol = currency_name + base_currency_name
             viapair_symbol = currency_name + via_currency_name
-            viabtcpair_symbol = via_currency_name + base_currency_name
+            viabasepair_symbol = via_currency_name + base_currency_name
             if currency_name in ["BTC", "ETH", "BNB", "XMR", "USDT"]:
                 return -1
-            if not (btcpair_symbol in hash and viapair_symbol in hash and viabtcpair_symbol in hash):
+            if not (basepair_symbol in book_ticker_hash and viapair_symbol in book_ticker_hash and viabasepair_symbol in book_ticker_hash):
                 return -1
 
-            xbtc_ask_price   = float(hash[btcpair_symbol]["askPrice"])    # Buy X at BTC
-            xbtc_ask_lot     = float(hash[btcpair_symbol]["askQty"])
-            xvia_bid_price   = float(hash[viapair_symbol]["bidPrice"])    # Buy (VIA) at X
-            xvia_bid_lot     = float(hash[viapair_symbol]["bidQty"])
-            viabtc_bid_price = float(hash[viabtcpair_symbol]["bidPrice"]) # Buy BTC at (VIA)
-            viabtc_bid_lot   = float(hash[viabtcpair_symbol]["bidQty"])
-            rate_via_bid     = 1 / xbtc_ask_price * xvia_bid_price * viabtc_bid_price * (1 - fee)**3
+            xbase_ask_price   = float(book_ticker_hash[basepair_symbol]["askPrice"])    # Buy X at (BASE)
+            xbase_ask_lot     = float(book_ticker_hash[basepair_symbol]["askQty"])
+            xvia_bid_price   = float(book_ticker_hash[viapair_symbol]["bidPrice"])    # Buy (VIA) at X
+            xvia_bid_lot     = float(book_ticker_hash[viapair_symbol]["bidQty"])
+            viabase_bid_price = float(book_ticker_hash[viabasepair_symbol]["bidPrice"]) # Buy (BASE) at (VIA)
+            viabase_bid_lot   = float(book_ticker_hash[viabasepair_symbol]["bidQty"])
+            rate_via_bid     = 1 / xbase_ask_price * xvia_bid_price * viabase_bid_price * (1 - fee)**3
 
-            viabtc_ask_price = float(hash[viabtcpair_symbol]["askPrice"]) # Buy (VIA) at BTC
-            viabtc_ask_lot   = float(hash[viabtcpair_symbol]["askQty"])
-            xvia_ask_price   = float(hash[viapair_symbol]["askPrice"])    # Buy X at (VIA)
-            xvia_ask_lot     = float(hash[viapair_symbol]["askQty"])
-            xbtc_bid_price   = float(hash[btcpair_symbol]["bidPrice"])    # Buy BTC at X
-            xbtc_bid_lot     = float(hash[btcpair_symbol]["bidQty"])
-            rate_via_ask     = 1 / viabtc_ask_price / xvia_ask_price * xbtc_bid_price * (1 - fee)**3
+            viabase_ask_price = float(book_ticker_hash[viabasepair_symbol]["askPrice"]) # Buy (VIA) at (BASE)
+            viabase_ask_lot   = float(book_ticker_hash[viabasepair_symbol]["askQty"])
+            xvia_ask_price   = float(book_ticker_hash[viapair_symbol]["askPrice"])    # Buy X at (VIA)
+            xvia_ask_lot     = float(book_ticker_hash[viapair_symbol]["askQty"])
+            xbase_bid_price   = float(book_ticker_hash[basepair_symbol]["bidPrice"])    # Buy (BASE) at X
+            xbase_bid_lot     = float(book_ticker_hash[basepair_symbol]["bidQty"])
+            rate_via_ask     = 1 / viabase_ask_price / xvia_ask_price * xbase_bid_price * (1 - fee)**3
 
             hope = 0
             if rate_via_bid > 1:
@@ -151,9 +151,9 @@ class Triangular:
                     datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     exchange_name,
                     base_currency_name + "->" + currency_name + "->" + via_currency_name + "->" + base_currency_name, str8(rate_via_bid),
-                    btcpair_symbol + ":BUY", str8(xbtc_ask_price), str8(xbtc_ask_lot), str8(xbtc_ask_price * xbtc_ask_lot),
-                    viapair_symbol + ":SELL", str8(xvia_bid_price), str8(xvia_bid_lot), str8(xvia_bid_price * xvia_bid_lot * viabtc_bid_price),
-                    viabtcpair_symbol + ":SELL", str8(viabtc_bid_price), str8(viabtc_bid_lot), str8(viabtc_bid_price * viabtc_bid_lot)
+                    basepair_symbol + ":BUY", str8(xbase_ask_price), str8(xbase_ask_lot), str8(xbase_ask_price * xbase_ask_lot),
+                    viapair_symbol + ":SELL", str8(xvia_bid_price), str8(xvia_bid_lot), str8(xvia_bid_price * xvia_bid_lot * viabase_bid_price),
+                    viabasepair_symbol + ":SELL", str8(viabase_bid_price), str8(viabase_bid_lot), str8(viabase_bid_price * viabase_bid_lot)
                 ]
                 self.log(row_via_bid, exchange_name)
                 triangle_orders.extend([row_via_bid])
@@ -163,9 +163,9 @@ class Triangular:
                     datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                     exchange_name,
                     base_currency_name + "->" + via_currency_name + "->" + currency_name + "->" + base_currency_name, str8(rate_via_ask),
-                    viabtcpair_symbol + ":BUY", str8(viabtc_ask_price), str8(viabtc_ask_lot), str8(viabtc_ask_price * viabtc_ask_lot),
-                    viapair_symbol + ":BUY", str8(xvia_ask_price), str8(xvia_ask_lot), str8(xvia_ask_price * xvia_ask_lot * viabtc_ask_price),
-                    btcpair_symbol + ":SELL", str8(xbtc_bid_price), str8(xbtc_bid_lot), str8(xbtc_bid_price * xbtc_bid_lot)
+                    viabasepair_symbol + ":BUY", str8(viabase_ask_price), str8(viabase_ask_lot), str8(viabase_ask_price * viabase_ask_lot),
+                    viapair_symbol + ":BUY", str8(xvia_ask_price), str8(xvia_ask_lot), str8(xvia_ask_price * xvia_ask_lot * viabase_ask_price),
+                    basepair_symbol + ":SELL", str8(xbase_bid_price), str8(xbase_bid_lot), str8(xbase_bid_price * xbase_bid_lot)
                 ]
                 self.log(row_via_ask, exchange_name)
                 triangle_orders.extend([row_via_ask])
@@ -252,9 +252,9 @@ class Triangular:
             base_currency_name,
         ))
         msgs.append("")
-        msgs.append("1st order:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f" % (orders[0]["symbol"], orders[0]["side"], orders[0]["price"], orders[0]["lot"], orders[0]["base_lot"], orders[0]["final_lot"]))
-        msgs.append("2nd order:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f" % (orders[1]["symbol"], orders[1]["side"], orders[1]["price"], orders[1]["lot"], orders[1]["base_lot"], orders[1]["final_lot"]))
-        msgs.append("3rd order:%s(%s), price:%0.8f, lot:%0.8f, btc_lot:%0.8f, final_lot:%0.8f" % (orders[2]["symbol"], orders[2]["side"], orders[2]["price"], orders[2]["lot"], orders[2]["base_lot"], orders[2]["final_lot"]))
+        msgs.append("1st order:%s(%s), price:%0.8f, lot:%0.8f, base_lot:%0.8f, final_lot:%0.8f" % (orders[0]["symbol"], orders[0]["side"], orders[0]["price"], orders[0]["lot"], orders[0]["base_lot"], orders[0]["final_lot"]))
+        msgs.append("2nd order:%s(%s), price:%0.8f, lot:%0.8f, base_lot:%0.8f, final_lot:%0.8f" % (orders[1]["symbol"], orders[1]["side"], orders[1]["price"], orders[1]["lot"], orders[1]["base_lot"], orders[1]["final_lot"]))
+        msgs.append("3rd order:%s(%s), price:%0.8f, lot:%0.8f, base_lot:%0.8f, final_lot:%0.8f" % (orders[2]["symbol"], orders[2]["side"], orders[2]["price"], orders[2]["lot"], orders[2]["base_lot"], orders[2]["final_lot"]))
 
         for msg in msgs:
             applog.info(msg)

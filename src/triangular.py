@@ -269,6 +269,7 @@ class Triangular:
             return
 
         order_count = 0
+        is_failed = False
         for order in orders:
             r = self.binance.order(
                 order["symbol"],
@@ -329,8 +330,9 @@ class Triangular:
                     else:
                         applog.error("Failed triangular arbitrage. status=" + r["status"])
                         mailer.sendmail("%s,%s" % (r["symbol"], r["orderId"]), "Failed - Daryl Triangular")
+                        is_failed = True
                         break
-            if order_count == 0:
+            if order_count == 0 or is_failed:
                 break
         if order_count == 3:
             mailer.sendmail(route, "Successful - Daryl Triangular")

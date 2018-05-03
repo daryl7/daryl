@@ -218,7 +218,7 @@ class Triangular:
         min_base_lot = min(min_base_lot, self.__get_asset_lot(base_currency_name))
 
         if min_base_lot < self.__get_lower_limit(base_currency_name, True):
-            print("Total must be at latest %f%s. (min_base_lot = %0.8f)" % (self.__get_lower_limit(base_currency_name, True), base_currency_name, min_base_lot))
+            applog.info("Total must be at latest %f%s. (min_base_lot = %0.8f)" % (self.__get_lower_limit(base_currency_name, True), base_currency_name, min_base_lot))
             return
 
         orders[0]["final_lot"] = self.binance.lot_filter(orders[0]["symbol"], orders[0]["lot"] * min_base_lot / orders[0]["base_lot"])
@@ -230,7 +230,7 @@ class Triangular:
 
         via_lot = orders[1]["final_lot"] * orders[1]["price"]
         if via_lot < self.__get_lower_limit(via_currency_name, False):
-            print("Total must be at latest %f%s. (via_lot = %0.8f)" % (self.__get_lower_limit(via_currency_name, False), via_currency_name, via_lot))
+            applog.info("Total must be at latest %f%s. (via_lot = %0.8f)" % (self.__get_lower_limit(via_currency_name, False), via_currency_name, via_lot))
             return
 
         msgs = [""]

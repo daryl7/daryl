@@ -221,11 +221,11 @@ class Triangular:
             applog.info("Total must be at latest %f%s. (min_base_lot = %0.8f)" % (self.__get_lower_limit(base_currency_name, True), base_currency_name, min_base_lot))
             return
 
-        orders[0]["final_lot"] = self.binance.lot_filter(orders[0]["symbol"], orders[0]["lot"] * min_base_lot / orders[0]["base_lot"])
+        orders[0]["final_lot"] = self.binance.lot_filter(orders[0]["lot"] * min_base_lot / orders[0]["base_lot"], orders[0]["symbol"])
         if orders[1]["side"] == "BUY":
-            orders[1]["final_lot"] = self.binance.lot_filter(orders[1]["symbol"], orders[0]["final_lot"] / orders[1]["price"])
+            orders[1]["final_lot"] = self.binance.lot_filter(orders[0]["final_lot"] / orders[1]["price"], orders[1]["symbol"], orders[2]["symbol"])
         elif orders[1]["side"] == "SELL":
-            orders[1]["final_lot"] = self.binance.lot_filter(orders[1]["symbol"], orders[0]["final_lot"] * orders[1]["price"])
+            orders[1]["final_lot"] = self.binance.lot_filter(orders[0]["final_lot"] * orders[1]["price"], orders[1]["symbol"], orders[2]["symbol"])
         orders[2]["final_lot"] = orders[1]["final_lot"]
 
         via_lot = orders[1]["final_lot"] * orders[1]["price"]

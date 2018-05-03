@@ -306,9 +306,14 @@ class Binance:
             symbol["filters"] = filters
             self.exchange_info_hash[symbol["symbol"]] = symbol
 
-    def lot_filter(self, symbol, lot):
-        minQty = float(self.exchange_info_hash[symbol]["filters"]["LOT_SIZE"]["minQty"])
-        return lot - lot % minQty
+    def lot_filter(self, lot, symbol1, symbol2 = ""):
+        if symbol2 == "":
+            minQty = float(self.exchange_info_hash[symbol1]["filters"]["LOT_SIZE"]["minQty"])
+            return lot - lot % minQty
+        else:
+            minQty1 = float(self.exchange_info_hash[symbol1]["filters"]["LOT_SIZE"]["minQty"])
+            minQty2 = float(self.exchange_info_hash[symbol2]["filters"]["LOT_SIZE"]["minQty"])
+            return lot - lot % max(minQty1, minQty2)
 
     def health_check(self, dryrun):
         # TODO: implement

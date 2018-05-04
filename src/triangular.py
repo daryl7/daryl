@@ -19,22 +19,13 @@ class Triangular:
     def __init__(self, *args, **kwargs):
         self.binance = Binance()
         self.poloniex = Poloniex()
-        self.tsv_filepath = "./log/triangular.tsv"
-        self.only_binance_tsv_filepath = "./log/triangular_only_binance.tsv"
+        self.log_dir = Config.get_log_dir() + "/triangular"
         self.interval = 3
         self.profit_lower_limit = Config.get_triangular_profit_lower_limit()
 
-    def log(self, row, exchange):
-        record = "\t".join(row)
-        print(record)
-        with open(self.tsv_filepath, mode = 'a', encoding = 'utf-8') as fh:
-            fh.write(record + '\n')
-
-        if exchange == "Binance":
-            with open(self.only_binance_tsv_filepath, mode = 'a', encoding = 'utf-8') as fh:
-                fh.write(record + '\n')
-
     def run(self, run_mode, is_binance, is_poloniex):
+        applog.init(self.__prepare_dir(self.log_dir + "/app.log"))
+
         if run_mode == "RealTrade":
             dryrun = False
         else:
@@ -355,14 +346,29 @@ class Triangular:
     def __get_asset_lot(base_currency_name):
         return Config.get_triangular_asset()["binance"][base_currency_name]
 
+    def log(self, row, exchange):
+        record = "\t".join(row)
+        print(record)
+        with open(self.__prepare_log_filepath(exchange + "_mon"), mode = 'a', encoding = 'utf-8') as fh:
+            fh.write(record + '\n')
+
+    def __prepare_dir(self, filepath):
+        dir = os.path.dirname(filepath)
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        return filepath
+
+    def __prepare_log_filepath(self, name):
+        date = datetime.now().strftime("%Y-%m-%d")
+        filepath = self.log_dir + "/" + name + "_" + date + ".tsv"
+        return self.__prepare_dir(filepath)
+
 
 if __name__ == '__main__':
-    applog.init("app_triangular")
-
     if len(sys.argv) > 1 and sys.argv[1] in {"RealTrade", "DemoTrade", "Batch"}:
         run_mode = sys.argv[1]
     else:
-        applog.error("bad argument!")
+        print("bad argument!")
         sys.exit()
 
     triangular = Triangular()

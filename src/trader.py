@@ -10,6 +10,7 @@ import smtplib
 from email.mime.text import MIMEText
 import sys
 import applog
+from config import Config
 
 class CoinStatus(IntEnum):
     BitFlyer = auto()
@@ -166,7 +167,7 @@ class Trader:
                 time.sleep(3)
 
 if __name__ == '__main__':
-    applog.init("app")
+    applog.init(Config.get_log_dir() + "/app.log",)
 
     if len(sys.argv) > 1 and sys.argv[1] in {"RealTrade", "DemoTrade", "Batch"}:
         run_mode = sys.argv[1]

@@ -12,7 +12,7 @@ from mailer import Mailer
 
 
 def str8(v):
-    return str(round(v, 8))
+    return "%0.8f" % v
 
 
 class Triangular:
@@ -175,6 +175,7 @@ class Triangular:
         return None
 
     def trade_binance(self, triangle_order, dryrun):
+        start_t = datetime.now()
         mailer = Mailer()
 
         route = triangle_order[2]
@@ -232,9 +233,10 @@ class Triangular:
 
         expected_revenue = orders[2]["final_lot"] * orders[2]["price"] - orders[0]["final_lot"] * orders[0]["price"]
         expected_fee = (lambda x: x - x * (1 - self.binance.comission_fee)**3)(orders[0]["final_lot"] * orders[0]["price"])
+        expected_final_revenue = expected_revenue - expected_fee
 
-        msgs.append("[beta] %d JPY" % ((expected_revenue - expected_fee) * 1000000))
-        msgs.append("Expected Final Revenue:%0.8f%s" % (expected_revenue - expected_fee, base_currency_name))
+        msgs.append("[beta] %d JPY" % ((expected_final_revenue) * 1000000))
+        msgs.append("Expected Final Revenue:%0.8f%s" % (expected_final_revenue, base_currency_name))
         msgs.append("Expected fee:%0.8f%s" % (expected_fee, base_currency_name))
         msgs.append("Expected Revenue:%0.8f%s    1st lot(%0.8f(%0.8f%s)) => 3rd lot(%0.8f(%0.8f%s))" % (
             expected_revenue,
@@ -260,7 +262,7 @@ class Triangular:
             return
 
         order_count = 0
-        is_failed = False
+        final_status = ""
         for order in orders:
             r = self.binance.order(
                 order["symbol"],
@@ -317,17 +319,19 @@ class Triangular:
                         cancel_result = self.binance.cancel_order(r["symbol"], r["orderId"])
                         applog.info("Canceled. result=" + str(cancel_result))
                         mailer.sendmail("%s,%s" % (r["symbol"], r["orderId"]), "Canceled - Daryl Triangular")
+                        final_status = "cancel"
                         break
                     else:
                         applog.error("Failed triangular arbitrage. status=" + r["status"])
                         mailer.sendmail("%s,%s" % (r["symbol"], r["orderId"]), "Failed - Daryl Triangular")
-                        is_failed = True
+                        final_status = "failed"
                         break
-            if order_count == 0 or is_failed:
+            if final_status in ["cancel", "failed"]:
                 break
         if order_count == 3:
             mailer.sendmail(route, "Successful - Daryl Triangular")
-
+            final_status = "successful"
+        self.trade_log(start_t, "Binance", route, expected_final_revenue, final_status)
 
     @staticmethod
     def __get_lower_limit(base_currency_name, put_the_margin):
@@ -345,6 +349,18 @@ class Triangular:
     @staticmethod
     def __get_asset_lot(base_currency_name):
         return Config.get_triangular_asset()["binance"][base_currency_name]
+
+    def trade_log(self, start_t, exchange, route, expected_final_revenue, final_status):
+        row = [
+            start_t.strftime("%Y-%m-%d %H:%M:%S"),
+            exchange,
+            route,
+            str8(expected_final_revenue),
+            final_status,
+            str((datetime.now() - start_t).total_seconds()),
+        ]
+        with open(self.log_dir + "/" + exchange + "_trade.tsv", mode = 'a', encoding = 'utf-8') as fh:
+            fh.write("\t".join(row) + '\n')
 
     def log(self, row, exchange):
         record = "\t".join(row)

@@ -11,13 +11,13 @@ def init(filepath):
         format='%(asctime)s %(levelname)s %(message)s')
 
 def error(message):
-    print("ERR:  " + message)
+    print("ERR:  " + str(message))
     logging.error(message)
 
 def warning(message):
-    print("WARN: " + message)
+    print("WARN: " + str(message))
     logging.warning(message)
 
 def info(message):
-    print("INFO: " + message)
+    print("INFO: " + str(message))
     logging.info(message)

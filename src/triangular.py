@@ -304,6 +304,7 @@ class Triangular:
                             cancel_result = self.binance.cancel_order(r["symbol"], r["orderId"])
                             applog.info("Canceled. result=" + str(cancel_result))
                             mailer.sendmail("%s,%s" % (r["symbol"], r["orderId"]), "Canceled - Daryl Triangular")
+                            final_status = "cancel"
                             break
                         time.sleep(0.01)
                     else:

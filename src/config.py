@@ -14,13 +14,7 @@ class Config:
             return config["log"]["applog"]["logdir"]
 
     @staticmethod
-    def get_triangular_asset():
+    def get_triangular():
         with open('config.yml', 'r') as yml:
             config = yaml.load(yml)
-            return config["triangular"]["asset"]
-
-    @staticmethod
-    def get_triangular_profit_lower_limit():
-        with open('config.yml', 'r') as yml:
-            config = yaml.load(yml)
-            return config["triangular"]["profit_lower_limit"]
+            return config["triangular"]

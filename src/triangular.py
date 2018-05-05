@@ -22,7 +22,8 @@ class Triangular:
         self.poloniex = Poloniex()
         self.log_dir = Config.get_log_dir() + "/triangular"
         self.interval = 3
-        self.profit_lower_limit = Config.get_triangular_profit_lower_limit()
+        self.profit_lower_limit = Config.get_triangular()["profit_lower_limit"]
+        self.risk_hedge_of_target_currency_price = Config.get_triangular()["risk_hedge_of_target_currency_price"]
 
     def run(self, run_mode, is_binance, is_poloniex):
         applog.init(self.__prepare_dir(self.log_dir + "/app.log"))
@@ -42,6 +43,7 @@ class Triangular:
         applog.info("Start Triangular Arbitrage. RunMode = " + run_mode)
         applog.info("binance.comission_fee: %0.8f" % self.binance.comission_fee)
         applog.info("profit_lower_limit: %0.8f" % self.profit_lower_limit)
+        applog.info("risk_hedge_of_target_currency_price: %d" % self.risk_hedge_of_target_currency_price)
         applog.info("========================================")
 
         self.binance.refresh_exchange_info()
@@ -128,12 +130,10 @@ class Triangular:
             if not (basepair_symbol in book_ticker_hash and viapair_symbol in book_ticker_hash and viabasepair_symbol in book_ticker_hash):
                 return -1
 
-            risk_hedge = 1
-
             xbase_ask_price   = float(book_ticker_hash[basepair_symbol]["askPrice"])    # Buy (BASE) -> X
             xbase_ask_lot     = float(book_ticker_hash[basepair_symbol]["askQty"])
             xvia_bid_price    = float(book_ticker_hash[viapair_symbol]["bidPrice"])     # Sell X -> (VIA)
-            xvia_bid_price    = xvia_bid_price - self.binance.get_tick_size(viapair_symbol) * risk_hedge
+            xvia_bid_price    = xvia_bid_price - self.binance.get_tick_size(viapair_symbol) * self.risk_hedge_of_target_currency_price
             xvia_bid_lot      = float(book_ticker_hash[viapair_symbol]["bidQty"])
             viabase_bid_price = float(book_ticker_hash[viabasepair_symbol]["bidPrice"]) # Sell (VIA) -> (BASE)
             viabase_bid_lot   = float(book_ticker_hash[viabasepair_symbol]["bidQty"])
@@ -144,7 +144,7 @@ class Triangular:
             xvia_ask_price    = float(book_ticker_hash[viapair_symbol]["askPrice"])     # Buy (VIA) -> X
             xvia_ask_lot      = float(book_ticker_hash[viapair_symbol]["askQty"])
             xbase_bid_price   = float(book_ticker_hash[basepair_symbol]["bidPrice"])    # Sell X -> (BASE)
-            xbase_bid_price   = xbase_bid_price - self.binance.get_tick_size(basepair_symbol) * risk_hedge
+            xbase_bid_price   = xbase_bid_price - self.binance.get_tick_size(basepair_symbol) * self.risk_hedge_of_target_currency_price
             xbase_bid_lot     = float(book_ticker_hash[basepair_symbol]["bidQty"])
             rate_via_ask      = 1 / viabase_ask_price / xvia_ask_price * xbase_bid_price * (1 - fee)**3
 
@@ -367,7 +367,7 @@ class Triangular:
 
     @staticmethod
     def __get_asset_lot(base_currency_name):
-        return Config.get_triangular_asset()["binance"][base_currency_name]
+        return Config.get_triangular()["asset"]["binance"][base_currency_name]
 
     def trade_log(self, start_t, exchange, route, expected_final_revenue, final_status):
         row = [

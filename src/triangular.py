@@ -435,10 +435,9 @@ class Triangular:
             fh.write("\t".join(row) + '\n')
 
     def log(self, row, exchange):
-        record = "\t".join(row)
-        print(record)
+        print(", ".join(row[0:4]))
         with open(self.__prepare_log_filepath(exchange + "_mon"), mode = 'a', encoding = 'utf-8') as fh:
-            fh.write(record + '\n')
+            fh.write("\t".join(row) + '\n')
 
     def __prepare_dir(self, filepath):
         dir = os.path.dirname(filepath)

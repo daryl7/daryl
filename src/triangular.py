@@ -299,26 +299,26 @@ class Triangular:
             applog.info("")
 
         if route_type == "BUY_SELL_BUY":
-            expected_revenue = orders[2]["final_lot"] - orders[0]["final_lot"] * orders[0]["price"]
+            expected_profit = orders[2]["final_lot"] - orders[0]["final_lot"] * orders[0]["price"]
             expected_fee = (lambda x: x - x * (1 - self.binance.comission_fee)**3)(orders[2]["final_lot"])
         elif route_type == "SELL_BUY_SELL":
-            expected_revenue = orders[2]["final_lot"] * orders[2]["price"] - orders[0]["final_lot"]
+            expected_profit = orders[2]["final_lot"] * orders[2]["price"] - orders[0]["final_lot"]
             expected_fee = (lambda x: x - x * (1 - self.binance.comission_fee)**3)(orders[2]["final_lot"] * orders[2]["price"])
         else:
-            expected_revenue = orders[2]["final_lot"] * orders[2]["price"] - orders[0]["final_lot"] * orders[0]["price"]
+            expected_profit = orders[2]["final_lot"] * orders[2]["price"] - orders[0]["final_lot"] * orders[0]["price"]
             expected_fee = (lambda x: x - x * (1 - self.binance.comission_fee)**3)(orders[2]["final_lot"] * orders[2]["price"])
-        expected_final_revenue = expected_revenue - expected_fee
+        expected_final_profit = expected_profit - expected_fee
 
-        if expected_final_revenue <= 0:
-            applog.info("Situation has changed. expected_final_revenue = %0.8f" % expected_final_revenue)
+        if expected_final_profit <= 0:
+            applog.info("Situation has changed. expected_final_revenue = %0.8f" % expected_final_profit)
             return False
 
         msgs = [""]
-        msgs.append("[beta] %d JPY" % ((expected_final_revenue) * 1000000))
-        msgs.append("Expected Final Revenue:%0.8f%s" % (expected_final_revenue, base_currency_name))
+        msgs.append("[beta] %d JPY" % ((expected_final_profit) * 1000000))
+        msgs.append("Expected Final Profit:%0.8f%s" % (expected_final_profit, base_currency_name))
         msgs.append("Expected fee:%0.8f%s" % (expected_fee, base_currency_name))
-        msgs.append("Expected Revenue:%0.8f%s    1st lot(%0.8f(%0.8f%s)) => 3rd lot(%0.8f(%0.8f%s))" % (
-            expected_revenue,
+        msgs.append("Expected Profit:%0.8f%s    1st lot(%0.8f(%0.8f%s)) => 3rd lot(%0.8f(%0.8f%s))" % (
+            expected_profit,
             base_currency_name,
             orders[0]["final_lot"],
             orders[0]["final_lot"] * orders[0]["price"],
@@ -409,7 +409,7 @@ class Triangular:
             if order_count == 3:
                 mailer.sendmail(route, "Successful - Daryl Triangular")
                 final_status = "successful"
-            self.trade_log(start_t, "Binance", route, expected_final_revenue, final_status)
+            self.trade_log(start_t, "Binance", route, expected_final_profit, final_status)
         return True
 
     def make_final_order(self, _orders, base_currency_name, route_type, risk_hedge):

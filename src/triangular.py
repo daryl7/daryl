@@ -120,23 +120,29 @@ class Triangular:
             if not (basepair_symbol in book_ticker_hash and viapair_symbol in book_ticker_hash and viabasepair_symbol in book_ticker_hash):
                 return -1
 
-            xbase_ask_price   = float(book_ticker_hash[basepair_symbol]["askPrice"])    # Buy X at (BASE)
-            xbase_ask_lot     = float(book_ticker_hash[basepair_symbol]["askQty"])
-            xvia_bid_price   = float(book_ticker_hash[viapair_symbol]["bidPrice"])    # Buy (VIA) at X
-            xvia_bid_lot     = float(book_ticker_hash[viapair_symbol]["bidQty"])
-            viabase_bid_price = float(book_ticker_hash[viabasepair_symbol]["bidPrice"]) # Buy (BASE) at (VIA)
-            viabase_bid_lot   = float(book_ticker_hash[viabasepair_symbol]["bidQty"])
-            rate_via_bid     = 1 / xbase_ask_price * xvia_bid_price * viabase_bid_price * (1 - fee)**3
+            risk_hedge = 1
 
-            viabase_ask_price = float(book_ticker_hash[viabasepair_symbol]["askPrice"]) # Buy (VIA) at (BASE)
+            xbase_ask_price   = float(book_ticker_hash[basepair_symbol]["askPrice"])    # Buy (BASE) -> X
+            xbase_ask_lot     = float(book_ticker_hash[basepair_symbol]["askQty"])
+            xvia_bid_price    = float(book_ticker_hash[viapair_symbol]["bidPrice"])     # Sell X -> (VIA)
+            xvia_bid_price    = xvia_bid_price - self.binance.get_tick_size(viapair_symbol) * risk_hedge
+            xvia_bid_lot      = float(book_ticker_hash[viapair_symbol]["bidQty"])
+            viabase_bid_price = float(book_ticker_hash[viabasepair_symbol]["bidPrice"]) # Sell (VIA) -> (BASE)
+            viabase_bid_lot   = float(book_ticker_hash[viabasepair_symbol]["bidQty"])
+            rate_via_bid      = 1 / xbase_ask_price * xvia_bid_price * viabase_bid_price * (1 - fee)**3
+
+            viabase_ask_price = float(book_ticker_hash[viabasepair_symbol]["askPrice"]) # Buy (BASE) -> (VIA)
             viabase_ask_lot   = float(book_ticker_hash[viabasepair_symbol]["askQty"])
-            xvia_ask_price   = float(book_ticker_hash[viapair_symbol]["askPrice"])    # Buy X at (VIA)
-            xvia_ask_lot     = float(book_ticker_hash[viapair_symbol]["askQty"])
-            xbase_bid_price   = float(book_ticker_hash[basepair_symbol]["bidPrice"])    # Buy (BASE) at X
+            xvia_ask_price    = float(book_ticker_hash[viapair_symbol]["askPrice"])     # Buy (VIA) -> X
+            xvia_ask_lot      = float(book_ticker_hash[viapair_symbol]["askQty"])
+            xbase_bid_price   = float(book_ticker_hash[basepair_symbol]["bidPrice"])    # Sell X -> (BASE)
+            xbase_bid_price   = xbase_bid_price - self.binance.get_tick_size(basepair_symbol) * risk_hedge
             xbase_bid_lot     = float(book_ticker_hash[basepair_symbol]["bidQty"])
-            rate_via_ask     = 1 / viabase_ask_price / xvia_ask_price * xbase_bid_price * (1 - fee)**3
+            rate_via_ask      = 1 / viabase_ask_price / xvia_ask_price * xbase_bid_price * (1 - fee)**3
 
             hope = 0
+
+            # BUY->BUY->SELL
             if rate_via_bid > 1:
                 row_via_bid = [
                     datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -149,6 +155,8 @@ class Triangular:
                 self.log(row_via_bid, exchange_name)
                 triangle_orders.extend([row_via_bid])
                 hope += 1
+
+            # BUY->SELL->SELL
             if rate_via_ask > 1:
                 row_via_ask = [
                     datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -229,12 +237,14 @@ class Triangular:
             applog.info("Total must be at latest %f%s. (via_lot = %0.8f)" % (self.__get_lower_limit(via_currency_name, False), via_currency_name, via_lot))
             return
 
-        msgs = [""]
-
         expected_revenue = orders[2]["final_lot"] * orders[2]["price"] - orders[0]["final_lot"] * orders[0]["price"]
         expected_fee = (lambda x: x - x * (1 - self.binance.comission_fee)**3)(orders[0]["final_lot"] * orders[0]["price"])
         expected_final_revenue = expected_revenue - expected_fee
 
+        if expected_final_revenue <= 0:
+            applog.info("Round of error. expected_final_revenue = %0.8f", expected_final_revenue)
+
+        msgs = [""]
         msgs.append("[beta] %d JPY" % ((expected_final_revenue) * 1000000))
         msgs.append("Expected Final Revenue:%0.8f%s" % (expected_final_revenue, base_currency_name))
         msgs.append("Expected fee:%0.8f%s" % (expected_fee, base_currency_name))

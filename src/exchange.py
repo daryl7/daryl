@@ -315,6 +315,9 @@ class Binance:
             minQty2 = float(self.exchange_info_hash[symbol2]["filters"]["LOT_SIZE"]["minQty"])
             return lot - lot % max(minQty1, minQty2)
 
+    def get_tick_size(self, symbol):
+        return float(self.exchange_info_hash[symbol]["filters"]["PRICE_FILTER"]["tickSize"])
+
     def health_check(self, dryrun):
         # TODO: implement
         return True

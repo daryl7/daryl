@@ -63,11 +63,19 @@ class Triangular:
                 book_ticker_hash = self.binance.refresh_ticker_all()
                 triangle_orders = []
                 for symbol in book_ticker_hash:
+                    r = self.triangle_all_check(triangle_orders, "Binance", "BTC", "USDT", symbol, book_ticker_hash, self.binance.comission_fee, dryrun)
+                    if r >=0:
+                        total += 2
+                        hope += r
                     r = self.triangle_all_check(triangle_orders, "Binance", "BTC", "ETH", symbol, book_ticker_hash, self.binance.comission_fee, dryrun)
                     if r >=0:
                         total += 2
                         hope += r
                     r = self.triangle_all_check(triangle_orders, "Binance", "BTC", "BNB", symbol, book_ticker_hash, self.binance.comission_fee, dryrun)
+                    if r >=0:
+                        total += 2
+                        hope += r
+                    r = self.triangle_all_check(triangle_orders, "Binance", "ETH", "USDT", symbol, book_ticker_hash, self.binance.comission_fee, dryrun)
                     if r >=0:
                         total += 2
                         hope += r
@@ -121,59 +129,112 @@ class Triangular:
         i = symbol.find(via_currency_name)
         if not (i == -1 or i == 0):
             currency_name = symbol[0:len(symbol) - len(via_currency_name)]
-            basepair_symbol = currency_name + base_currency_name
-            viapair_symbol = currency_name + via_currency_name
-            viabasepair_symbol = via_currency_name + base_currency_name
             if currency_name in ["BTC", "ETH", "BNB", "XMR", "USDT"]:
                 return -1
+
+            if via_currency_name in ["BTC", "ETH", "BNB"]:
+                basepair_symbol = currency_name + base_currency_name
+                viapair_symbol = currency_name + via_currency_name
+                viabasepair_symbol = via_currency_name + base_currency_name
+            elif via_currency_name == "USDT":
+                basepair_symbol = currency_name + base_currency_name
+                viapair_symbol = currency_name + via_currency_name
+                viabasepair_symbol = base_currency_name + via_currency_name
             if not (basepair_symbol in book_ticker_hash and viapair_symbol in book_ticker_hash and viabasepair_symbol in book_ticker_hash):
                 return -1
 
-            xbase_ask_price   = float(book_ticker_hash[basepair_symbol]["askPrice"])    # Buy (BASE) -> X
-            xbase_ask_lot     = float(book_ticker_hash[basepair_symbol]["askQty"])
-            xvia_bid_price    = float(book_ticker_hash[viapair_symbol]["bidPrice"])     # Sell X -> (VIA)
-            xvia_bid_price    = xvia_bid_price - self.binance.get_tick_size(viapair_symbol) * self.risk_hedge_of_target_currency_price
-            xvia_bid_lot      = float(book_ticker_hash[viapair_symbol]["bidQty"])
-            viabase_bid_price = float(book_ticker_hash[viabasepair_symbol]["bidPrice"]) # Sell (VIA) -> (BASE)
-            viabase_bid_lot   = float(book_ticker_hash[viabasepair_symbol]["bidQty"])
-            rate_via_bid      = 1 / xbase_ask_price * xvia_bid_price * viabase_bid_price * (1 - fee)**3
-
-            viabase_ask_price = float(book_ticker_hash[viabasepair_symbol]["askPrice"]) # Buy (BASE) -> (VIA)
-            viabase_ask_lot   = float(book_ticker_hash[viabasepair_symbol]["askQty"])
-            xvia_ask_price    = float(book_ticker_hash[viapair_symbol]["askPrice"])     # Buy (VIA) -> X
-            xvia_ask_lot      = float(book_ticker_hash[viapair_symbol]["askQty"])
-            xbase_bid_price   = float(book_ticker_hash[basepair_symbol]["bidPrice"])    # Sell X -> (BASE)
-            xbase_bid_price   = xbase_bid_price - self.binance.get_tick_size(basepair_symbol) * self.risk_hedge_of_target_currency_price
-            xbase_bid_lot     = float(book_ticker_hash[basepair_symbol]["bidQty"])
-            rate_via_ask      = 1 / viabase_ask_price / xvia_ask_price * xbase_bid_price * (1 - fee)**3
-
             hope = 0
 
-            # BUY->BUY->SELL
-            if rate_via_bid > 1:
-                row_via_bid = [
-                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    exchange_name,
-                    base_currency_name + "->" + currency_name + "->" + via_currency_name + "->" + base_currency_name, str8(rate_via_bid),
-                    basepair_symbol + ":BUY", str8(xbase_ask_price), str8(xbase_ask_lot), str8(xbase_ask_price * xbase_ask_lot),
-                    viapair_symbol + ":SELL", str8(xvia_bid_price), str8(xvia_bid_lot), str8(xvia_bid_price * xvia_bid_lot * viabase_bid_price),
-                    viabasepair_symbol + ":SELL", str8(viabase_bid_price), str8(viabase_bid_lot), str8(viabase_bid_price * viabase_bid_lot)
-                ]
-                triangle_orders.extend([row_via_bid])
-                hope += 1
+            if via_currency_name in ["BTC", "ETH", "BNB"]:
+                # BUY_BUY_SELL
+                viabase_ask_price = float(book_ticker_hash[viabasepair_symbol]["askPrice"]) # Buy (BASE) -> (VIA)
+                viabase_ask_lot   = float(book_ticker_hash[viabasepair_symbol]["askQty"])
+                xvia_ask_price    = float(book_ticker_hash[viapair_symbol]["askPrice"])     # Buy (VIA) -> X
+                xvia_ask_lot      = float(book_ticker_hash[viapair_symbol]["askQty"])
+                xbase_bid_price   = float(book_ticker_hash[basepair_symbol]["bidPrice"])    # Sell X -> (BASE)
+                xbase_bid_price   = xbase_bid_price - self.binance.get_tick_size(basepair_symbol) * self.risk_hedge_of_target_currency_price
+                xbase_bid_lot     = float(book_ticker_hash[basepair_symbol]["bidQty"])
+                buy_buy_sell_revenue      = 1 / viabase_ask_price / xvia_ask_price * xbase_bid_price * (1 - fee)**3
+                if buy_buy_sell_revenue > 1:
+                    row_buy_buy_sell = [
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        exchange_name,
+                        base_currency_name + "->" + via_currency_name + "->" + currency_name + "->" + base_currency_name, str8(buy_buy_sell_revenue),
+                        viabasepair_symbol + ":BUY", str8(viabase_ask_price), str8(viabase_ask_lot), str8(viabase_ask_price * viabase_ask_lot),
+                        viapair_symbol + ":BUY", str8(xvia_ask_price), str8(xvia_ask_lot), str8(xvia_ask_price * xvia_ask_lot * viabase_ask_price),
+                        basepair_symbol + ":SELL", str8(xbase_bid_price), str8(xbase_bid_lot), str8(xbase_bid_price * xbase_bid_lot),
+                        "BUY_BUY_SELL",
+                    ]
+                    triangle_orders.extend([row_buy_buy_sell])
+                    hope += 1
 
-            # BUY->SELL->SELL
-            if rate_via_ask > 1:
-                row_via_ask = [
-                    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                    exchange_name,
-                    base_currency_name + "->" + via_currency_name + "->" + currency_name + "->" + base_currency_name, str8(rate_via_ask),
-                    viabasepair_symbol + ":BUY", str8(viabase_ask_price), str8(viabase_ask_lot), str8(viabase_ask_price * viabase_ask_lot),
-                    viapair_symbol + ":BUY", str8(xvia_ask_price), str8(xvia_ask_lot), str8(xvia_ask_price * xvia_ask_lot * viabase_ask_price),
-                    basepair_symbol + ":SELL", str8(xbase_bid_price), str8(xbase_bid_lot), str8(xbase_bid_price * xbase_bid_lot)
-                ]
-                triangle_orders.extend([row_via_ask])
-                hope += 1
+                # BUY_SELL_SELL
+                xbase_ask_price   = float(book_ticker_hash[basepair_symbol]["askPrice"])    # Buy (BASE) -> X
+                xbase_ask_lot     = float(book_ticker_hash[basepair_symbol]["askQty"])
+                xvia_bid_price    = float(book_ticker_hash[viapair_symbol]["bidPrice"])     # Sell X -> (VIA)
+                xvia_bid_price    = xvia_bid_price - self.binance.get_tick_size(viapair_symbol) * self.risk_hedge_of_target_currency_price
+                xvia_bid_lot      = float(book_ticker_hash[viapair_symbol]["bidQty"])
+                viabase_bid_price = float(book_ticker_hash[viabasepair_symbol]["bidPrice"]) # Sell (VIA) -> (BASE)
+                viabase_bid_lot   = float(book_ticker_hash[viabasepair_symbol]["bidQty"])
+                buy_sell_sell_revenue      = 1 / xbase_ask_price * xvia_bid_price * viabase_bid_price * (1 - fee)**3
+                if buy_sell_sell_revenue > 1:
+                    row_buy_sell_sell = [
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        exchange_name,
+                        base_currency_name + "->" + currency_name + "->" + via_currency_name + "->" + base_currency_name, str8(buy_sell_sell_revenue),
+                        basepair_symbol + ":BUY", str8(xbase_ask_price), str8(xbase_ask_lot), str8(xbase_ask_price * xbase_ask_lot),
+                        viapair_symbol + ":SELL", str8(xvia_bid_price), str8(xvia_bid_lot), str8(xvia_bid_price * xvia_bid_lot * viabase_bid_price),
+                        viabasepair_symbol + ":SELL", str8(viabase_bid_price), str8(viabase_bid_lot), str8(viabase_bid_price * viabase_bid_lot),
+                        "BUY_SELL_SELL",
+                    ]
+                    triangle_orders.extend([row_buy_sell_sell])
+                    hope += 1
+
+            elif via_currency_name == "USDT":
+                # BUY_SELL_BUY
+                xbase_ask_price   = float(book_ticker_hash[basepair_symbol]["askPrice"])    # Buy (BASE) -> X
+                xbase_ask_lot     = float(book_ticker_hash[basepair_symbol]["askQty"])
+                xvia_bid_price    = float(book_ticker_hash[viapair_symbol]["bidPrice"])     # Sell X -> (VIA)
+                xvia_bid_price    = xvia_bid_price - self.binance.get_tick_size(viapair_symbol) * self.risk_hedge_of_target_currency_price
+                xvia_bid_lot      = float(book_ticker_hash[viapair_symbol]["bidQty"])
+                basevia_ask_price = float(book_ticker_hash[viabasepair_symbol]["askPrice"]) # Buy (VIA) -> (BASE)
+                basevia_ask_lot   = float(book_ticker_hash[viabasepair_symbol]["askQty"])
+                buy_sell_buy_revenue      = 1 / xbase_ask_price * xvia_bid_price / basevia_ask_price * (1 - fee)**3
+                if buy_sell_buy_revenue > 1:
+                    row_buy_sell_buy = [
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        exchange_name,
+                        base_currency_name + "->" + currency_name + "->" + via_currency_name + "->" + base_currency_name, str8(buy_sell_buy_revenue),
+                        basepair_symbol + ":BUY", str8(xbase_ask_price), str8(xbase_ask_lot), str8(xbase_ask_price * xbase_ask_lot),
+                        viapair_symbol + ":SELL", str8(xvia_bid_price), str8(xvia_bid_lot), str8(xvia_bid_price * xvia_bid_lot / basevia_ask_price),
+                        viabasepair_symbol + ":BUY", str8(basevia_ask_price), str8(basevia_ask_lot), str8(basevia_ask_lot),
+                        "BUY_SELL_BUY",
+                    ]
+                    triangle_orders.extend([row_buy_sell_buy])
+                    hope += 1
+
+                # SELL_BUY_SELL
+                basevia_bid_price = float(book_ticker_hash[viabasepair_symbol]["bidPrice"]) # Sell (BASE) -> (VIA)
+                basevia_bid_lot   = float(book_ticker_hash[viabasepair_symbol]["bidQty"])
+                xvia_ask_price    = float(book_ticker_hash[viapair_symbol]["askPrice"])     # Buy (VIA) -> X
+                xvia_ask_lot      = float(book_ticker_hash[viapair_symbol]["askQty"])
+                xbase_bid_price   = float(book_ticker_hash[basepair_symbol]["bidPrice"])    # Sell X -> (BASE)
+                xbase_bid_price -= self.binance.get_tick_size(basepair_symbol) * self.risk_hedge_of_target_currency_price
+                xbase_bid_lot     = float(book_ticker_hash[basepair_symbol]["bidQty"])
+                sell_buy_sell_revenue      = 1 * basevia_bid_price / xvia_ask_price * xbase_bid_price * (1 - fee)**3
+                if sell_buy_sell_revenue > 1:
+                    row_sell_buy_sell = [
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        exchange_name,
+                        base_currency_name + "->" + via_currency_name + "->" + currency_name + "->" + base_currency_name, str8(sell_buy_sell_revenue),
+                        viabasepair_symbol + ":SELL", str8(basevia_bid_price), str8(basevia_bid_lot), str8(basevia_bid_lot),
+                        viapair_symbol + ":BUY", str8(xvia_ask_price), str8(xvia_ask_lot), str8(xvia_ask_price * xvia_ask_lot / basevia_bid_price),
+                        basepair_symbol + ":SELL", str8(xbase_bid_price), str8(xbase_bid_lot), str8(xbase_bid_price * xbase_bid_lot),
+                        "SELL_BUY_SELL",
+                    ]
+                    triangle_orders.extend([row_sell_buy_sell])
+                    hope += 1
+
             return hope
         else:
             return -1
@@ -196,6 +257,7 @@ class Triangular:
         base_currency_name = route[:3]
         viasymbole = triangle_order[8].split(":")[0]
         via_currency_name = viasymbole[len(viasymbole)-3:]
+        route_type = triangle_order[16]
         pre_orders = [
             {
                 "symbol": triangle_order[4].split(":")[0],
@@ -220,7 +282,7 @@ class Triangular:
             },
         ]
 
-        orders = self.make_final_order(pre_orders, 2)
+        orders = self.make_final_order(pre_orders, base_currency_name, route_type, 2)
         if orders is None:
             return False
 
@@ -236,8 +298,15 @@ class Triangular:
             order_count += 1
             applog.info("")
 
-        expected_revenue = orders[2]["final_lot"] * orders[2]["price"] - orders[0]["final_lot"] * orders[0]["price"]
-        expected_fee = (lambda x: x - x * (1 - self.binance.comission_fee)**3)(orders[2]["final_lot"] * orders[2]["price"])
+        if route_type == "BUY_SELL_BUY":
+            expected_revenue = orders[2]["final_lot"] - orders[0]["final_lot"] * orders[0]["price"]
+            expected_fee = (lambda x: x - x * (1 - self.binance.comission_fee)**3)(orders[2]["final_lot"])
+        elif route_type == "SELL_BUY_SELL":
+            expected_revenue = orders[2]["final_lot"] * orders[2]["price"] - orders[0]["final_lot"]
+            expected_fee = (lambda x: x - x * (1 - self.binance.comission_fee)**3)(orders[2]["final_lot"] * orders[2]["price"])
+        else:
+            expected_revenue = orders[2]["final_lot"] * orders[2]["price"] - orders[0]["final_lot"] * orders[0]["price"]
+            expected_fee = (lambda x: x - x * (1 - self.binance.comission_fee)**3)(orders[2]["final_lot"] * orders[2]["price"])
         expected_final_revenue = expected_revenue - expected_fee
 
         if expected_final_revenue <= 0:
@@ -343,12 +412,13 @@ class Triangular:
             self.trade_log(start_t, "Binance", route, expected_final_revenue, final_status)
         return True
 
-    def make_final_order(self, _orders, risk_hedge):
-        base_symbol = _orders[0]["symbol"]
-        base_currency_name = base_symbol[len(base_symbol)-3:]
+    def make_final_order(self, _orders, base_currency_name, route_type, risk_hedge):
+        if self.__get_asset_lot(base_currency_name) == 0:
+            print("You are no money. " + base_currency_name)
+            return None
 
         via_symbol = _orders[1]["symbol"]
-        via_currency_name = via_symbol[len(via_symbol)-3:]
+        via_currency_name = self.__get_basename_from_symbol(via_symbol)
 
         final_orders = []
         for order in _orders:
@@ -358,7 +428,7 @@ class Triangular:
             for ask in depth["asks" if order["side"] == "BUY" else "bids"]:
                 price = float(ask[0])
                 lot = lot + float(ask[1])
-                if lot * price / risk_hedge > self.__get_lower_limit(symbol[len(symbol)-3:], True):
+                if lot * price / risk_hedge > self.__get_lower_limit(self.__get_basename_from_symbol(symbol), True):
                     break
             final_orders.append({
                 "symbol": order["symbol"],
@@ -367,16 +437,21 @@ class Triangular:
                 "lot": lot,
             })
 
-        # BUY->BUY->SELL
-        if final_orders[1]["side"] == "BUY":
+        if route_type == "BUY_BUY_SELL":
             final_orders[0]["base_lot"] = final_orders[0]["price"] * final_orders[0]["lot"]
             final_orders[1]["base_lot"] = final_orders[1]["price"] * final_orders[1]["lot"] * final_orders[0]["price"]
             final_orders[2]["base_lot"] = final_orders[2]["price"] * final_orders[2]["lot"]
-
-        # BUY->SELL->SELL
-        if final_orders[1]["side"] == "SELL":
+        elif route_type == "BUY_SELL_SELL":
             final_orders[0]["base_lot"] = final_orders[0]["price"] * final_orders[0]["lot"]
             final_orders[1]["base_lot"] = final_orders[1]["price"] * final_orders[1]["lot"] * final_orders[2]["price"]
+            final_orders[2]["base_lot"] = final_orders[2]["price"] * final_orders[2]["lot"]
+        elif route_type == "BUY_SELL_BUY":
+            final_orders[0]["base_lot"] = final_orders[0]["price"] * final_orders[0]["lot"]
+            final_orders[1]["base_lot"] = final_orders[1]["price"] * final_orders[1]["lot"] / final_orders[2]["price"]
+            final_orders[2]["base_lot"] = final_orders[2]["lot"]
+        elif route_type == "SELL_BUY_SELL":
+            final_orders[0]["base_lot"] = final_orders[0]["lot"]
+            final_orders[1]["base_lot"] = final_orders[1]["price"] * final_orders[1]["lot"] / final_orders[0]["price"]
             final_orders[2]["base_lot"] = final_orders[2]["price"] * final_orders[2]["lot"]
 
         raw_min_base_lot = min([final_orders[0]["base_lot"], final_orders[1]["base_lot"], final_orders[2]["base_lot"]])
@@ -387,16 +462,22 @@ class Triangular:
             applog.info("Total must be at latest %f%s. (min_base_lot = %0.8f)" % (self.__get_lower_limit(base_currency_name, True), base_currency_name, min_base_lot))
             return None
 
-        if final_orders[1]["side"] == "BUY":
-            # BUY->BUY->SELL
-            final_orders[0]["final_lot"] = self.binance.lot_filter(final_orders[0]["lot"] * min_base_lot / final_orders[0]["base_lot"], final_orders[0]["symbol"])                      # via lot
+        if route_type == "BUY_BUY_SELL":
+            final_orders[0]["final_lot"] = self.binance.lot_filter(final_orders[0]["lot"] * min_base_lot / final_orders[0]["base_lot"], final_orders[0]["symbol"])                            # via lot
             final_orders[1]["final_lot"] = self.binance.lot_filter(final_orders[0]["final_lot"] / final_orders[1]["price"],             final_orders[1]["symbol"], final_orders[2]["symbol"]) # target lot
-            final_orders[2]["final_lot"] = final_orders[1]["final_lot"]                                                                                                     # target lot
-        else:
-            # BUY->SELL->SELL
+            final_orders[2]["final_lot"] = final_orders[1]["final_lot"]                                                                                                                       # target lot
+        elif route_type == "BUY_SELL_SELL":
             final_orders[0]["final_lot"] = self.binance.lot_filter(final_orders[0]["lot"] * min_base_lot / final_orders[0]["base_lot"], final_orders[0]["symbol"], final_orders[1]["symbol"]) # target lot
-            final_orders[1]["final_lot"] = final_orders[0]["final_lot"]                                                                                                     # target lot
-            final_orders[2]["final_lot"] = self.binance.lot_filter(final_orders[1]["final_lot"] * final_orders[1]["price"],             final_orders[2]["symbol"])                      # via lot
+            final_orders[1]["final_lot"] = final_orders[0]["final_lot"]                                                                                                                       # target lot
+            final_orders[2]["final_lot"] = self.binance.lot_filter(final_orders[1]["final_lot"] * final_orders[1]["price"],             final_orders[2]["symbol"])                            # via lot
+        elif route_type == "BUY_SELL_BUY":
+            final_orders[0]["final_lot"] = self.binance.lot_filter(final_orders[0]["lot"] * min_base_lot / final_orders[0]["base_lot"], final_orders[0]["symbol"], final_orders[1]["symbol"]) # target lot
+            final_orders[1]["final_lot"] = final_orders[0]["final_lot"]                                                                                                                       # target lot
+            final_orders[2]["final_lot"] = self.binance.lot_filter(final_orders[1]["final_lot"] * final_orders[0]["price"],             final_orders[0]["symbol"])                            # base lot
+        elif route_type == "SELL_BUY_SELL":
+            final_orders[0]["final_lot"] = self.binance.lot_filter(final_orders[0]["lot"] * min_base_lot / final_orders[0]["base_lot"], final_orders[0]["symbol"])                            # base lot
+            final_orders[1]["final_lot"] = self.binance.lot_filter(final_orders[0]["final_lot"] / final_orders[2]["price"],             final_orders[1]["symbol"], final_orders[2]["symbol"]) # target lot
+            final_orders[2]["final_lot"] = final_orders[1]["final_lot"]                                                                                                                       # target lot
 
         via_lot = final_orders[1]["final_lot"] * final_orders[1]["price"]
         if via_lot < self.__get_lower_limit(via_currency_name, False):
@@ -407,11 +488,17 @@ class Triangular:
 
     @staticmethod
     def __get_lower_limit(base_currency_name, put_the_margin):
-        lower_limit = 0.001  # "BTC"
-        if base_currency_name == "ETH":
+        if base_currency_name == "BTC":
+            lower_limit = 0.001
+        elif base_currency_name == "ETH":
             lower_limit = 0.01
         elif base_currency_name == "BNB":
             lower_limit = 1
+        elif base_currency_name == "USDT":
+            lower_limit = 1
+        else:
+            applog.error("not found. base_currency_name = " + base_currency_name)
+            raise Exception
 
         if put_the_margin:
             lower_limit = lower_limit * 10
@@ -450,6 +537,12 @@ class Triangular:
         filepath = self.log_dir + "/" + name + "_" + date + ".tsv"
         return self.__prepare_dir(filepath)
 
+    @staticmethod
+    def __get_basename_from_symbol(symbol):
+        basename = symbol[len(symbol)-3:]
+        if basename == "SDT":
+            basename = "USDT"
+        return basename
 
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] in {"RealTrade", "DemoTrade", "Batch"}:

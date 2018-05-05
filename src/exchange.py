@@ -306,6 +306,11 @@ class Binance:
             symbol["filters"] = filters
             self.exchange_info_hash[symbol["symbol"]] = symbol
 
+    def depth(self, symbol, limit = 10):
+        with Binance.__urlopen_public("GET", "/api/v1/depth", param = {"symbol":symbol, "limit":limit}) as res:
+            html = res.read().decode("utf-8")
+        return json.loads(html)
+
     def lot_filter(self, lot, symbol1, symbol2 = ""):
         if symbol2 == "":
             minQty = float(self.exchange_info_hash[symbol1]["filters"]["LOT_SIZE"]["minQty"])

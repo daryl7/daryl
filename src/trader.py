@@ -11,11 +11,15 @@ from email.mime.text import MIMEText
 import sys
 import applog
 from config import Config
+import traceback
+from mailer import Mailer
+
 
 class CoinStatus(IntEnum):
     BitFlyer = auto()
     CoinCheck = auto()
     Binance = auto()
+
 
 class Trader:
     def __init__(self, *args, **kwargs):
@@ -161,10 +165,14 @@ class Trader:
                 mon.usdjpy = float(row[7])
                 coin_status = self.decision_and_order(coin_status, mon, dryrun)
         else:
-            while True:
-                mon.refresh()
-                coin_status = self.decision_and_order(coin_status, mon, dryrun)
-                time.sleep(3)
+            try:
+                while True:
+                    mon.refresh()
+                    coin_status = self.decision_and_order(coin_status, mon, dryrun)
+                    time.sleep(3)
+            except Exception as e:
+                applog.error(traceback.format_exc())
+                Mailer().sendmail(traceback.format_exc())
 
 if __name__ == '__main__':
     applog.init(Config.get_log_dir() + "/app.log",)

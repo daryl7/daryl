@@ -9,6 +9,7 @@ import os
 import applog
 from config import Config
 from mailer import Mailer
+import traceback
 
 
 def str8(v):
@@ -45,6 +46,13 @@ class Triangular:
 
         self.binance.refresh_exchange_info()
 
+        try:
+            self.main_loop(dryrun, is_binance, is_poloniex)
+        except Exception as e:
+            applog.error(traceback.format_exc())
+            mailer.sendmail(traceback.format_exc(), "Assertion - Daryl Triangular")
+
+    def main_loop(self, dryrun, is_binance, is_poloniex):
         while True:
             total = 0
             hope = 0

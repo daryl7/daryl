@@ -420,9 +420,7 @@ class LegalTender:
                 v = self.last_v
 
         if v < 0:
-            applog.error("Failed LegalTender!")
-            applog.error("".join(traceback.format_stack()))
-            sys.exit()
+            raise Exception
 
         self.last_v = v
         return v

@@ -24,6 +24,20 @@ class Triangular:
         self.interval = 3
         self.profit_lower_limit = Config.get_triangular()["profit_lower_limit"]
         self.risk_hedge_of_target_currency_price = Config.get_triangular()["risk_hedge_of_target_currency_price"]
+        self.binance_pairs = [
+            {"base": "BTC", "via": "USDT"},
+            {"base": "BTC", "via": "ETH"},
+            {"base": "BTC", "via": "BNB"},
+            {"base": "ETH", "via": "USDT"},
+            {"base": "ETH", "via": "BNB"},
+        ]
+        self.poloniex_pairs = [
+            {"base": "BTC", "via": "USDT"},
+            {"base": "BTC", "via": "ETH"},
+            {"base": "BTC", "via": "XMR"},
+            {"base": "ETH", "via": "USDT"},
+            {"base": "ETH", "via": "XMR"},
+        ]
 
     def run(self, run_mode, is_binance, is_poloniex):
         applog.init(self.__prepare_dir(self.log_dir + "/app.log"))
@@ -63,26 +77,11 @@ class Triangular:
                 book_ticker_hash = self.binance.refresh_ticker_all()
                 triangle_orders = []
                 for symbol in book_ticker_hash:
-                    r = self.triangle_all_check(triangle_orders, "Binance", "BTC", "USDT", symbol, book_ticker_hash, self.binance.comission_fee, dryrun)
-                    if r >=0:
-                        total += 2
-                        hope += r
-                    r = self.triangle_all_check(triangle_orders, "Binance", "BTC", "ETH", symbol, book_ticker_hash, self.binance.comission_fee, dryrun)
-                    if r >=0:
-                        total += 2
-                        hope += r
-                    r = self.triangle_all_check(triangle_orders, "Binance", "BTC", "BNB", symbol, book_ticker_hash, self.binance.comission_fee, dryrun)
-                    if r >=0:
-                        total += 2
-                        hope += r
-                    r = self.triangle_all_check(triangle_orders, "Binance", "ETH", "USDT", symbol, book_ticker_hash, self.binance.comission_fee, dryrun)
-                    if r >=0:
-                        total += 2
-                        hope += r
-                    r = self.triangle_all_check(triangle_orders, "Binance", "ETH", "BNB", symbol, book_ticker_hash, self.binance.comission_fee, dryrun)
-                    if r >=0:
-                        total += 2
-                        hope += r
+                    for pair in self.binance_pairs:
+                        r = self.triangle_all_check(triangle_orders, "Binance", pair["base"], pair["via"], symbol, book_ticker_hash, self.binance.comission_fee, dryrun)
+                        if r >=0:
+                            total += 2
+                            hope += r
                 self.order_challenge_binance(triangle_orders, dryrun)
 
             if is_poloniex:
@@ -99,26 +98,11 @@ class Triangular:
                     }
                 triangle_orders = []
                 for symbol in book_ticker_hash:
-                    r = self.triangle_all_check(triangle_orders, "Poloniex", "BTC", "ETH", symbol, book_ticker_hash, 0.0025, dryrun)
-                    if r >=0:
-                        total += 2
-                        hope += r
-                    r = self.triangle_all_check(triangle_orders, "Poloniex", "BTC", "XMR", symbol, book_ticker_hash, 0.0025, dryrun)
-                    if r >=0:
-                        total += 2
-                        hope += r
-                    r = self.triangle_all_check(triangle_orders, "Poloniex", "ETH", "XMR", symbol, book_ticker_hash, 0.0025, dryrun)
-                    if r >=0:
-                        total += 2
-                        hope += r
-                    r = self.triangle_all_check(triangle_orders, "Poloniex", "USDT", "BTC", symbol, book_ticker_hash, 0.0025, dryrun)
-                    if r >=0:
-                        total += 2
-                        hope += r
-                    r = self.triangle_all_check(triangle_orders, "Poloniex", "USDT", "ETH", symbol, book_ticker_hash, 0.0025, dryrun)
-                    if r >=0:
-                        total += 2
-                        hope += r
+                    for pair in self.poloniex_pairs:
+                        r = self.triangle_all_check(triangle_orders, "Poloniex", pair["base"], pair["via"], symbol, book_ticker_hash, 0.0025, dryrun)
+                        if r >=0:
+                            total += 2
+                            hope += r
                 # self.trade_poloniex(orders)  <= TODO
 
             print("hope/total = " + str(hope) + "/" + str(total))

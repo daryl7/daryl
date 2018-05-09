@@ -44,6 +44,7 @@ class Triangular:
         applog.info("Start Triangular Arbitrage. RunMode = " + run_mode)
         applog.info("binance.comission_fee: %0.8f" % self.binance.comission_fee)
         applog.info("profit_lower_limit: %0.8f" % self.profit_lower_limit)
+        applog.info("expected_final_profit_lower_btc_limit: %0.8f" % self.expected_final_profit_lower_btc_limit)
         applog.info("risk_hedge_of_target_currency_price: %d" % self.risk_hedge_of_target_currency_price)
         applog.info("========================================")
 

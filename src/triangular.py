@@ -23,6 +23,7 @@ class Triangular:
         self.log_dir = Config.get_log_dir() + "/triangular"
         self.interval = 3
         self.profit_lower_limit = Config.get_triangular()["profit_lower_limit"]
+        self.expected_final_profit_lower_btc_limit = Config.get_triangular()["expected_final_profit_lower_btc_limit"]
         self.risk_hedge_of_target_currency_price = Config.get_triangular()["risk_hedge_of_target_currency_price"]
 
     def run(self, run_mode, is_binance, is_poloniex):
@@ -309,8 +310,8 @@ class Triangular:
             expected_fee = (lambda x: x - x * (1 - self.binance.comission_fee)**3)(orders[2]["final_lot"] * orders[2]["price"])
         expected_final_profit = expected_profit - expected_fee
 
-        if expected_final_profit <= 0:
-            applog.info("Situation has changed. expected_final_revenue = %0.8f" % expected_final_profit)
+        if expected_final_profit < self.expected_final_profit_lower_btc_limit:
+            applog.info("Situation has changed. expected_final_revenue = %0.8f < %0.8f" % (expected_final_profit, self.expected_final_profit_lower_btc_limit))
             return False
 
         msgs = [""]

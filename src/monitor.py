@@ -3,6 +3,7 @@ import datetime
 import time
 import os
 
+
 class Monitor:
     def __init__(self, log_dir = "./log"):
         self.bitflyer = BitFlyer()
@@ -23,6 +24,8 @@ class Monitor:
 
         self.bitflyer = BitFlyer()
         self.bitflyer.refresh_ticker()
+        if not self.bitflyer.validation_check(True):
+            return
         bf_bid = self.bitflyer.bid
         bf_ask = self.bitflyer.ask
 
@@ -41,6 +44,8 @@ class Monitor:
 
         self.binance = Binance()
         self.binance.refresh_ticker()
+        if not self.binance.validation_check(True):
+            return
         bn_bid_usd = self.binance.bid
         bn_ask_usd = self.binance.ask
         bn_bid_jpy = int(float(bn_bid_usd) * self.usdjpy)
@@ -51,6 +56,9 @@ class Monitor:
         print(res)
         with open(self.__prepare_log_filepath('monitor_BTCJPY_BF_BN/monitor_BTCJPY_BF_BN'), mode = 'a', encoding = 'utf-8') as fh:
             fh.write(res + '\n')
+
+    def validation_check(self):
+        return self.bitflyer.validation_check() and self.binance.validation_check()
 
     def health_check(self, dryrun):
         return self.bitflyer.health_check(dryrun) and self.binance.health_check(dryrun)

@@ -112,8 +112,25 @@ class Context:
         return float(context['asset']['binance']['usd'])
 
 
-class BitFlyer:
+class Exchange:
+    def __init__(self):
+        self.ask = 0
+        self.bid = 0
+
+    def validation_check(self, is_log = False):
+        if self.ask == 0 or self.bid == 0 or self.ask < self.bid:
+            if is_log:
+                applog.warning("validation error at %s: ask = %0.8f, bid = %0.8f" % (self.__class__.__name__, self.ask, self.bid))
+            return False
+        return True
+
+
+class BitFlyer(Exchange):
     __api_endpoint = 'https://api.bitflyer.jp'
+
+    def __init__(self):
+        super(BitFlyer, self).__init__()
+
     @staticmethod
     def __urlopen(method, path, *, param=None, data={}):
         paramtext = ""
@@ -241,8 +258,11 @@ class BitFlyer:
         return "\tsell_order:BitFlyer, price:" + str(price) + ", lot:" + str(lot) + ", commission:" + str(commission) + ", child_order_acceptance_id:" + child_order_acceptance_id
 
 
-class CoinCheck:
+class CoinCheck(Exchange):
     __api_endpoint = "https://coincheck.com"
+
+    def __init__(self):
+        super(CoinCheck, self).__init__()
 
     @staticmethod
     def __urlopen(method, path, *, param={}):
@@ -261,10 +281,11 @@ class CoinCheck:
             self.ask = int(json.loads(html)["ask"])
 
 
-class Binance:
+class Binance(Exchange):
     __api_endpoint = "https://api.binance.com"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
+        super(Binance, self).__init__()
         self.client = binance.client.Client(config['binance']['api_key'], config['binance']['api_secret'])
         self.comission_fee = config['binance']['comission_fee']
         self.all_ticker_hash = {}
@@ -378,8 +399,11 @@ class Binance:
         return self.client.cancel_order(symbol = symbol, orderId = order_id)
 
 
-class Poloniex:
+class Poloniex(Exchange):
     __api_endpoint = "https://poloniex.com"
+
+    def __init__(self):
+        super(Poloniex, self).__init__()
 
     @staticmethod
     def __urlopen_public(method, path, *, param={}):
@@ -396,7 +420,7 @@ class Poloniex:
 
 
 class LegalTender:
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         self.last_v = -1
 
     def get_rate_of_usdjpy(self):

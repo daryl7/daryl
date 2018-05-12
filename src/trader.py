@@ -86,10 +86,6 @@ class Trader:
             self.sendmail(message1 + "\n" + message2 + "\n" + message3)
 
     def decision_and_order(self, coin_status, mon, dryrun):
-        # skip when invalid value
-        if mon.bitflyer.ask < mon.bitflyer.bid or mon.binance.ask < mon.binance.bid:
-            return coin_status
-
         row = [mon.dt, str(mon.bf_bn_diff), str(mon.bn_bf_diff), str(mon.bitflyer.bid), str(mon.bitflyer.ask), str(mon.binance.bid), str(mon.binance.ask), str(mon.usdjpy)]
         if coin_status == CoinStatus.BitFlyer and mon.bf_bn_diff >= self.bf_bn_limit:
             if mon.health_check(dryrun):
@@ -168,7 +164,8 @@ class Trader:
             try:
                 while True:
                     mon.refresh()
-                    coin_status = self.decision_and_order(coin_status, mon, dryrun)
+                    if mon.validation_check():
+                        coin_status = self.decision_and_order(coin_status, mon, dryrun)
                     time.sleep(3)
             except Exception as e:
                 applog.error(traceback.format_exc())

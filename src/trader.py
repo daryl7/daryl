@@ -36,89 +36,6 @@ class Trader:
         self.trade_log_full_filepath = './log/trade_full.log'
         self.trade_tsv_filepath = './log/trade.tsv'
 
-    def trade_log(self, row):
-        record = "\t".join(row)
-        files = [
-            self.batch_output_filename,
-            self.trade_log_full_filepath,
-            self.trade_tsv_filepath
-        ]
-        for file in files:
-            with open(file, mode = 'a', encoding = 'utf-8') as fh:
-                fh.write(record + '\n')
-
-    def is_email_notification(self):
-        return not self.notification_email_to == ""
-
-    def sendmail(self, message):
-        you = self.notification_email_to
-        me = self.notification_email_from
-        msg = MIMEText(message)
-        msg['Subject'] = self.notification_email_subject
-        msg['To'] = you
-        msg['From'] = me
-        s = smtplib.SMTP()
-        s.connect()
-        s.sendmail(me, [you], msg.as_string())
-        s.close()
-
-    def checkmailer(self):
-        s = smtplib.SMTP()
-        try:
-            s.connect()
-            s.close()
-        except ConnectionRefusedError:
-            return False
-        return True
-
-    def order(self, monitor, buying_exchange, selling_exchange, diff, dryrun):
-        message1 = selling_exchange.__class__.__name__ + "->" + buying_exchange.__class__.__name__ + "(" + monitor.dt + ", diff:" + str(diff) + ")"
-        message2 = buying_exchange.buy_order_from_available_balance(dryrun)
-        message3 = selling_exchange.sell_order_from_available_balance(dryrun)
-        applog.info(message1)
-        applog.info(message2)
-        applog.info(message3)
-        with open(self.trade_log_full_filepath, mode = 'a', encoding = 'utf-8') as fh:
-            fh.write('\n'.join(["", message1, message2, message3, ""]))
-        Context.set_coin_status(buying_exchange.__class__.__name__)
-
-        if self.is_email_notification():
-            self.sendmail(message1 + "\n" + message2 + "\n" + message3)
-
-    def decision_and_order(self, coin_status, mon, dryrun):
-        row = [mon.dt, str(mon.bf_bn_diff), str(mon.bn_bf_diff), str(mon.bitflyer.bid), str(mon.bitflyer.ask), str(mon.binance.bid), str(mon.binance.ask), str(mon.usdjpy)]
-        if coin_status == CoinStatus.BitFlyer and mon.bf_bn_diff >= self.bf_bn_limit:
-            if mon.health_check(dryrun):
-                coin_status = CoinStatus.Binance
-                self.order(mon, mon.binance, mon.bitflyer, mon.bf_bn_diff, dryrun)
-                row.extend([
-                    "SELL",
-                    str(mon.bitflyer.last_sell_price),
-                    str(mon.bitflyer.last_sell_lot),
-                    str(mon.bitflyer.last_sell_commission),
-                    "BUY",
-                    str(mon.binance.last_buy_price),
-                    str(mon.binance.last_buy_lot),
-                    str(mon.binance.last_buy_comission)
-                ])
-                self.trade_log(row)
-        elif coin_status == CoinStatus.Binance and mon.bn_bf_diff >= self.bn_bf_limit:
-            if mon.health_check(dryrun):
-                coin_status = CoinStatus.BitFlyer
-                self.order(mon, mon.bitflyer, mon.binance, mon.bn_bf_diff, dryrun)
-                row.extend([
-                    "BUY",
-                    str(mon.bitflyer.last_buy_price),
-                    str(mon.bitflyer.last_buy_lot),
-                    str(mon.bitflyer.last_buy_commission),
-                    "SELL",
-                    str(mon.binance.last_sell_price),
-                    str(mon.binance.last_sell_lot),
-                    str(mon.binance.last_sell_comission)
-                ])
-                self.trade_log(row)
-        return coin_status
-
     def trade(self, run_mode):
         if os.path.exists(self.batch_output_filename):
             os.remove(self.batch_output_filename)
@@ -170,6 +87,90 @@ class Trader:
             except Exception as e:
                 applog.error(traceback.format_exc())
                 Mailer().sendmail(traceback.format_exc())
+
+    def decision_and_order(self, coin_status, mon, dryrun):
+        row = [mon.dt, str(mon.bf_bn_diff), str(mon.bn_bf_diff), str(mon.bitflyer.bid), str(mon.bitflyer.ask), str(mon.binance.bid), str(mon.binance.ask), str(mon.usdjpy)]
+        if coin_status == CoinStatus.BitFlyer and mon.bf_bn_diff >= self.bf_bn_limit:
+            if mon.health_check(dryrun):
+                coin_status = CoinStatus.Binance
+                self.order(mon, mon.binance, mon.bitflyer, mon.bf_bn_diff, dryrun)
+                row.extend([
+                    "SELL",
+                    str(mon.bitflyer.last_sell_price),
+                    str(mon.bitflyer.last_sell_lot),
+                    str(mon.bitflyer.last_sell_commission),
+                    "BUY",
+                    str(mon.binance.last_buy_price),
+                    str(mon.binance.last_buy_lot),
+                    str(mon.binance.last_buy_comission)
+                ])
+                self.trade_log(row)
+        elif coin_status == CoinStatus.Binance and mon.bn_bf_diff >= self.bn_bf_limit:
+            if mon.health_check(dryrun):
+                coin_status = CoinStatus.BitFlyer
+                self.order(mon, mon.bitflyer, mon.binance, mon.bn_bf_diff, dryrun)
+                row.extend([
+                    "BUY",
+                    str(mon.bitflyer.last_buy_price),
+                    str(mon.bitflyer.last_buy_lot),
+                    str(mon.bitflyer.last_buy_commission),
+                    "SELL",
+                    str(mon.binance.last_sell_price),
+                    str(mon.binance.last_sell_lot),
+                    str(mon.binance.last_sell_comission)
+                ])
+                self.trade_log(row)
+        return coin_status
+
+    def order(self, monitor, buying_exchange, selling_exchange, diff, dryrun):
+        message1 = selling_exchange.__class__.__name__ + "->" + buying_exchange.__class__.__name__ + "(" + monitor.dt + ", diff:" + str(diff) + ")"
+        message2 = buying_exchange.buy_order_from_available_balance(dryrun)
+        message3 = selling_exchange.sell_order_from_available_balance(dryrun)
+        applog.info(message1)
+        applog.info(message2)
+        applog.info(message3)
+        with open(self.trade_log_full_filepath, mode = 'a', encoding = 'utf-8') as fh:
+            fh.write('\n'.join(["", message1, message2, message3, ""]))
+        Context.set_coin_status(buying_exchange.__class__.__name__)
+
+        if self.is_email_notification():
+            self.sendmail(message1 + "\n" + message2 + "\n" + message3)
+
+    def trade_log(self, row):
+        record = "\t".join(row)
+        files = [
+            self.batch_output_filename,
+            self.trade_log_full_filepath,
+            self.trade_tsv_filepath
+        ]
+        for file in files:
+            with open(file, mode = 'a', encoding = 'utf-8') as fh:
+                fh.write(record + '\n')
+
+    def is_email_notification(self):
+        return not self.notification_email_to == ""
+
+    def sendmail(self, message):
+        you = self.notification_email_to
+        me = self.notification_email_from
+        msg = MIMEText(message)
+        msg['Subject'] = self.notification_email_subject
+        msg['To'] = you
+        msg['From'] = me
+        s = smtplib.SMTP()
+        s.connect()
+        s.sendmail(me, [you], msg.as_string())
+        s.close()
+
+    def checkmailer(self):
+        s = smtplib.SMTP()
+        try:
+            s.connect()
+            s.close()
+        except ConnectionRefusedError:
+            return False
+        return True
+
 
 if __name__ == '__main__':
     applog.init(Config.get_log_dir() + "/app.log",)

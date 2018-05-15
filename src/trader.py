@@ -23,7 +23,6 @@ class CoinStatus:
 class LogFiles:
     batch_output_filename = './trade_simulation.tsv'
     trade_log_full_filepath = './log/trade_full.log'
-    trade_tsv_filepath = './log/trade.tsv'
 
 
 class Trader:
@@ -119,7 +118,6 @@ class Position:
                 message2 = mon.bitflyer.sell_order_from_available_balance(self.hash["asset"]["bitflyer"]["btc"], dryrun)
                 message3 = mon.binance.buy_order_from_available_balance(self.hash["asset"]["binance"]["usd"], dryrun)
                 row.extend([
-                    self.hash["_label"],
                     "SELL",
                     str(mon.bitflyer.last_sell_price),
                     str(mon.bitflyer.last_sell_lot),
@@ -132,7 +130,6 @@ class Position:
                 self.exchange_bitflyer(mon.bitflyer.last_sell_price, False)
                 self.exchange_binance(mon.binance.last_buy_price, True)
                 self.hash["coin_status"] = CoinStatus.Binance
-                self.trade_log(row)
         elif self.hash["coin_status"] == CoinStatus.Binance and mon.bn_bf_diff >= self.hash["bn_bf_limit"]:
             if mon.health_check(dryrun):
                 execution = True
@@ -140,7 +137,6 @@ class Position:
                 message2 = mon.bitflyer.buy_order_from_available_balance(self.hash["asset"]["bitflyer"]["jpy"], dryrun)
                 message3 = mon.binance.sell_order_from_available_balance(self.hash["asset"]["binance"]["btc"], dryrun)
                 row.extend([
-                    self.hash["_label"],
                     "BUY",
                     str(mon.bitflyer.last_buy_price),
                     str(mon.bitflyer.last_buy_lot),
@@ -153,9 +149,10 @@ class Position:
                 self.exchange_bitflyer(mon.bitflyer.last_buy_price, True)
                 self.exchange_binance(mon.binance.last_sell_price, False)
                 self.hash["coin_status"] = CoinStatus.BitFlyer
-                self.trade_log(row)
 
         if execution:
+            self.trade_log(row, self.hash["_label"])
+
             applog.info(message1)
             applog.info(message2)
             applog.info(message3)
@@ -168,12 +165,12 @@ class Position:
 
         return execution
 
-    def trade_log(self, row):
+    def trade_log(self, row, label):
         record = "\t".join(row)
         files = [
             LogFiles.batch_output_filename,
             LogFiles.trade_log_full_filepath,
-            LogFiles.trade_tsv_filepath
+            "./log/trade(%s).tsv" % label,
         ]
         for file in files:
             with open(file, mode = 'a', encoding = 'utf-8') as fh:

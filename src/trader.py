@@ -58,6 +58,8 @@ class Trader:
         applog.info("notification_email_to = " + mailer.notification_email_to)
         applog.info("notification_email_from = " + mailer.notification_email_from)
         applog.info("notification_email_subject = " + mailer.notification_email_subject)
+        for position in self.positions:
+            applog.info(position.hash)
         applog.info("========================================")
 
         if run_mode == "Batch":

@@ -76,14 +76,14 @@ class Trader:
         else:
             try:
                 while True:
-                    mon.refresh()
-                    if mon.validation_check():
-                        execution = False
-                        for position in self.positions:
-                            if position.decision_and_order(mon, dryrun):
-                                execution = True
-                        if execution:
-                            self.save_positions()
+                    if mon.refresh():
+                        if mon.validation_check():
+                            execution = False
+                            for position in self.positions:
+                                if position.decision_and_order(mon, dryrun):
+                                    execution = True
+                            if execution:
+                                self.save_positions()
                     time.sleep(3)
             except Exception as e:
                 applog.error(traceback.format_exc())

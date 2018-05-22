@@ -1,11 +1,9 @@
-import csv
 import time
 import os
+import glob
 import yaml
-import monitor
-from enum import IntEnum, auto
-from monitor import Monitor
-from exchange import BitFlyer, Binance
+import exchange
+from exchange import LegalTender
 import smtplib
 from email.mime.text import MIMEText
 import sys
@@ -13,11 +11,7 @@ import applog
 from config import Config
 import traceback
 from mailer import Mailer
-
-
-class CoinStatus:
-    BitFlyer = "BitFlyer"
-    Binance = "Binance"
+from datetime import datetime
 
 
 class LogFiles:
@@ -25,34 +19,36 @@ class LogFiles:
     trade_log_full_filepath = './log/trade_full.log'
 
 
-class Trader:
-    def __init__(self, *args, **kwargs):
+class Seesaw:
+    def __init__(self, rule):
+        self.rule = rule
+
+        r = rule.split("_")
+        target_currency = r[0]
+        base_currency = r[1]
+        self.exchange1 = getattr(exchange, r[2])(target_currency, base_currency)
+        self.exchange2 = getattr(exchange, r[3])(target_currency, base_currency)
+        self.context_filepath = "./context/seesaw/" + rule + ".yml"
+        self.load_positions()
+
+        self.legal_tender = LegalTender()
+
         with open('config.yml', 'r') as yml:
             config = yaml.load(yml)
             self.order_offset_jpy = config['trader']['order_offset_jpy']
             self.order_offset_usd = config['trader']['order_offset_usd']
-        self.load_positions()
 
     def trade(self, run_mode):
-        if os.path.exists(LogFiles.batch_output_filename):
-            os.remove(LogFiles.batch_output_filename)
-
         mailer = Mailer()
         if mailer.is_use():
             if not mailer.checkmailer():
                 applog.error("mailer not activation!")
                 sys.exit()
 
-        if run_mode == "RealTrade":
-            dryrun = False
-        else:
-            dryrun = True
-
-        mon = Monitor()
+        dryrun = False if run_mode == "RealTrade" else True
 
         applog.info("========================================")
         applog.info("Start Trader. RunMode = " + run_mode)
-        applog.info("binance.comission_fee: " + str(mon.binance.comission_fee))
         applog.info("order_offset_jpy = " + str(self.order_offset_jpy))
         applog.info("order_offset_usd = " + str(self.order_offset_usd))
         applog.info("notification_email_to = " + mailer.notification_email_to)
@@ -60,38 +56,64 @@ class Trader:
         applog.info("notification_email_subject = " + mailer.notification_email_subject)
         applog.info("========================================")
 
-        if run_mode == "Batch":
-            tsv = csv.reader(open("results_BF_BN.txt", "r"), delimiter = '\t')
-            for row in tsv:
-                mon.dt = str(row[0])
-                mon.bf_bn_diff = float(row[1])
-                mon.bn_bf_diff = float(row[2])
-                mon.bitflyer.bid = float(row[3])
-                mon.bitflyer.ask = float(row[4])
-                mon.binance.bid = float(row[5])
-                mon.binance.ask = float(row[6])
-                mon.usdjpy = float(row[7])
-                for position in self.positions:
-                    position.decision_and_order(mon, dryrun)
+        try:
+            while True:
+                if self.refresh():
+                    if self.validation_check():
+                        execution = False
+                        for position in self.positions:
+                            if position.decision_and_order(self, dryrun):
+                                execution = True
+                        if execution:
+                            self.save_positions()
+                time.sleep(3)
+        except Exception as e:
+            applog.error(traceback.format_exc())
+            mailer.sendmail(traceback.format_exc())
+
+    def refresh(self, limit_second = 3):
+        start_t = datetime.now()
+        self.dt = start_t.strftime("%Y-%m-%d %H:%M:%S")
+
+        self.exchange1.refresh_ticker()
+        if not self.exchange1.validation_check(True):
+            return False
+
+        self.exchange2.refresh_ticker()
+        if not self.exchange2.validation_check(True):
+            return False
+
+        if (datetime.now() - start_t).total_seconds() > limit_second:
+            applog.warning("Network is to busy. Total seconds = %d" % (datetime.now() - start_t).total_seconds())
+            return False
+
+        if self.exchange1.get_base_currency() == "JPY":
+            self.usdjpy = self.legal_tender.get_rate_of_usdjpy()
+            ex1_bid_jpy, ex1_ask_jpy = self.exchange1.to_jpy(self.usdjpy)
+            ex2_bid_jpy, ex2_ask_jpy = self.exchange2.to_jpy(self.usdjpy)
+            self.diff_ex1_ex2 = int(ex1_bid_jpy - ex2_ask_jpy)
+            self.diff_ex2_ex1 = int(ex2_bid_jpy - ex1_ask_jpy)
+            res = '\t'.join([self.dt, str(self.diff_ex1_ex2), str(self.diff_ex2_ex1), str(self.exchange1.bid), str(self.exchange1.ask), str(self.exchange2.bid), str(self.exchange2.ask), str(self.usdjpy)])
         else:
-            try:
-                while True:
-                    if mon.refresh():
-                        if mon.validation_check():
-                            execution = False
-                            for position in self.positions:
-                                if position.decision_and_order(mon, dryrun):
-                                    execution = True
-                            if execution:
-                                self.save_positions()
-                    time.sleep(3)
-            except Exception as e:
-                applog.error(traceback.format_exc())
-                mailer.sendmail(traceback.format_exc())
+            self.diff_ex1_ex2 = self.exchange1.bid - self.exchange2.ask
+            self.diff_ex2_ex1 = self.exchange2.bid - self.exchange1.ask
+            res = '\t'.join([self.dt, str(self.diff_ex1_ex2), str(self.diff_ex2_ex1), str(self.exchange1.bid), str(self.exchange1.ask), str(self.exchange2.bid), str(self.exchange2.ask)])
+        print(res)
+
+        with open(self.__prepare_log_filepath(self.rule), mode = 'a', encoding = 'utf-8') as fh:
+            fh.write(res + '\n')
+
+        return True
+
+    def validation_check(self):
+        return self.exchange1.validation_check() and self.exchange2.validation_check()
+
+    def health_check(self, dryrun):
+        return self.exchange1.health_check(dryrun) and self.exchange2.health_check(dryrun)
 
     def load_positions(self):
         self.positions = []
-        with open('positions.yml', 'r') as yml:
+        with open(self.context_filepath, 'r') as yml:
             yml_positions = yaml.load(yml)
         for hash in yml_positions:
             self.positions.append(Position(hash))
@@ -100,58 +122,67 @@ class Trader:
         yml_positions = []
         for position in self.positions:
             yml_positions.append(position.hash)
-        with open('positions.yml', 'w') as yml:
+        with open(self.context_filepath, 'w') as yml:
             yml.write(yaml.dump(yml_positions, default_flow_style=False))
+
+    def __prepare_log_filepath(self, name):
+        date = datetime.now().strftime("%Y-%m-%d")
+        filepath = "./log/seesaw/monitor/" + name + "_" + date + ".tsv"
+        dir = os.path.dirname(filepath)
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+        return filepath
 
 
 class Position:
     def __init__(self, hash):
         self.hash = hash
 
-    def decision_and_order(self, mon, dryrun):
+    def decision_and_order(self, seesaw, dryrun):
         execution = False
-        row = [mon.dt, str(mon.bf_bn_diff), str(mon.bn_bf_diff), str(mon.bitflyer.bid), str(mon.bitflyer.ask), str(mon.binance.bid), str(mon.binance.ask), str(mon.usdjpy)]
-        if self.hash["coin_status"] == CoinStatus.BitFlyer and mon.bf_bn_diff >= self.hash["bf_bn_limit"]:
-            if mon.health_check(dryrun):
+        pair = self.hash["pair"]
+        row = [seesaw.dt, str(seesaw.diff_ex1_ex2), str(seesaw.diff_ex2_ex1), str(seesaw.exchange1.bid), str(seesaw.exchange1.ask), str(seesaw.exchange2.bid), str(seesaw.exchange2.ask), str(seesaw.usdjpy)]
+        if self.hash["coin_status"] == seesaw.exchange1.get_name() and seesaw.diff_ex1_ex2 >= pair[seesaw.exchange1.get_name()]["limit_diff_other_one"]:
+            if seesaw.health_check(dryrun):
                 execution = True
-                message1 = "BitFlyer->Binance(" + mon.dt + ", diff:" + str(mon.bf_bn_diff) + ")"
-                message2 = mon.bitflyer.sell_order_from_available_balance(self.hash["asset"]["bitflyer"]["btc"], dryrun)
-                message3 = mon.binance.buy_order_from_available_balance(self.hash["asset"]["binance"]["usd"], dryrun)
+                message1 = "%s->%s(%s, diff:%0.8f)" % (seesaw.exchange1.get_name(), seesaw.exchange2.get_name(), seesaw.dt, seesaw.diff_ex1_ex2)
+                message2 = seesaw.exchange1.sell_order_from_available_balance(pair[seesaw.exchange1.get_name()]["balance"][seesaw.exchange1.get_target_currency()], dryrun)
+                message3 = seesaw.exchange2.buy_order_from_available_balance(pair[seesaw.exchange2.get_name()]["balance"][seesaw.exchange2.get_base_currency()], dryrun)
                 row.extend([
                     "SELL",
-                    str(mon.bitflyer.last_sell_price),
-                    str(mon.bitflyer.last_sell_lot),
-                    str(mon.bitflyer.last_sell_commission),
+                    str(seesaw.exchange1.last_sell_price),
+                    str(seesaw.exchange1.last_sell_lot),
+                    str(seesaw.exchange1.last_sell_commission),
                     "BUY",
-                    str(mon.binance.last_buy_price),
-                    str(mon.binance.last_buy_lot),
-                    str(mon.binance.last_buy_comission)
+                    str(seesaw.exchange2.last_buy_price),
+                    str(seesaw.exchange2.last_buy_lot),
+                    str(seesaw.exchange2.last_buy_comission)
                 ])
-                self.exchange_bitflyer(mon.bitflyer.last_sell_price, False)
-                self.exchange_binance(mon.binance.last_buy_price, True)
-                self.hash["coin_status"] = CoinStatus.Binance
-        elif self.hash["coin_status"] == CoinStatus.Binance and mon.bn_bf_diff >= self.hash["bn_bf_limit"]:
-            if mon.health_check(dryrun):
+                self.exchange_balance(seesaw.exchange1, "SELL")
+                self.exchange_balance(seesaw.exchange2, "BUY")
+                self.hash["coin_status"] = seesaw.exchange2.get_name()
+        elif self.hash["coin_status"] == seesaw.exchange2.get_name() and seesaw.diff_ex2_ex1 >= pair[seesaw.exchange2.get_name()]["limit_diff_other_one"]:
+            if seesaw.health_check(dryrun):
                 execution = True
-                message1 = "Binance->BitFlyer(" + mon.dt + ", diff:" + str(mon.bn_bf_diff) + ")"
-                message2 = mon.bitflyer.buy_order_from_available_balance(self.hash["asset"]["bitflyer"]["jpy"], dryrun)
-                message3 = mon.binance.sell_order_from_available_balance(self.hash["asset"]["binance"]["btc"], dryrun)
+                message1 = "%s->%s(%s, diff:%0.8f)" % (seesaw.exchange2.get_name(), seesaw.exchange1.get_name(), seesaw.dt, seesaw.diff_ex2_ex1)
+                message2 = seesaw.exchange1.buy_order_from_available_balance(pair[seesaw.exchange1.get_name()]["balance"][seesaw.exchange1.get_base_currency()], dryrun)
+                message3 = seesaw.exchange2.sell_order_from_available_balance(pair[seesaw.exchange2.get_name()]["balance"][seesaw.exchange2.get_target_currency()], dryrun)
                 row.extend([
                     "BUY",
-                    str(mon.bitflyer.last_buy_price),
-                    str(mon.bitflyer.last_buy_lot),
-                    str(mon.bitflyer.last_buy_commission),
+                    str(seesaw.exchange1.last_buy_price),
+                    str(seesaw.exchange1.last_buy_lot),
+                    str(seesaw.exchange1.last_buy_commission),
                     "SELL",
-                    str(mon.binance.last_sell_price),
-                    str(mon.binance.last_sell_lot),
-                    str(mon.binance.last_sell_comission)
+                    str(seesaw.exchange2.last_sell_price),
+                    str(seesaw.exchange2.last_sell_lot),
+                    str(seesaw.exchange2.last_sell_comission)
                 ])
-                self.exchange_bitflyer(mon.bitflyer.last_buy_price, True)
-                self.exchange_binance(mon.binance.last_sell_price, False)
-                self.hash["coin_status"] = CoinStatus.BitFlyer
+                self.exchange_balance(seesaw.exchange1, "BUY")
+                self.exchange_balance(seesaw.exchange2, "SELL")
+                self.hash["coin_status"] = seesaw.exchange1.get_name()
 
         if execution:
-            self.trade_log(row, self.hash["_label"])
+            self.trade_log(row, self.hash["_position"])
 
             applog.info(message1)
             applog.info(message2)
@@ -176,37 +207,27 @@ class Position:
             with open(file, mode = 'a', encoding = 'utf-8') as fh:
                 fh.write(record + '\n')
 
-    def exchange_bitflyer(self, price, is_to_btc):
-        asset = self.hash["asset"]
-        if(is_to_btc):
-            assert not float(asset['bitflyer']['jpy']) == 0.0, "bitflyer jpy is 0"
-            asset['bitflyer']['btc'] = round(float(asset['bitflyer']['jpy']) / float(price), 8)
-            asset['bitflyer']['jpy'] = 0.0
+    def exchange_balance(self, exchange, side):
+        pair = self.hash["pair"]
+        if(side == "BUY"):
+            assert not float(pair[exchange.get_name()]["balance"][exchange.get_base_currency()]) == 0.0, "base_currency is 0"
+            pair[exchange.get_name()]["balance"][exchange.get_target_currency()] = round(float(pair[exchange.get_name()]["balance"][exchange.get_base_currency()]) / float(exchange.last_buy_price), 8)
+            pair[exchange.get_name()]["balance"][exchange.get_base_currency()] = 0.0
         else:
-            assert not float(asset['bitflyer']['btc']) == 0.0, "bitflyer btc is 0"
-            asset['bitflyer']['jpy'] = float(asset['bitflyer']['btc']) * price
-            asset['bitflyer']['btc'] = 0.0
-
-    def exchange_binance(self, price, is_to_btc):
-        asset = self.hash["asset"]
-        if(is_to_btc):
-            assert not float(asset['binance']['usd']) == 0.0, "binance usd is 0"
-            asset['binance']['btc'] = round(float(asset['binance']['usd']) / float(price), 6)
-            asset['binance']['usd'] = 0.0
-        else:
-            assert not float(asset['binance']['btc']) == 0.0, "binance btc is 0"
-            asset['binance']['usd'] = float(asset['binance']['btc']) * price
-            asset['binance']['btc'] = 0.0
+            assert not float(pair[exchange.get_name()]["balance"][exchange.get_target_currency()]) == 0.0, "target_currency is 0"
+            pair[exchange.get_name()]["balance"][exchange.get_base_currency()] = float(pair[exchange.get_name()]["balance"][exchange.get_target_currency()]) * exchange.last_sell_price
+            pair[exchange.get_name()]["balance"][exchange.get_target_currency()] = 0.0
 
 
 if __name__ == '__main__':
     applog.init(Config.get_log_dir() + "/app.log",)
 
-    if len(sys.argv) > 1 and sys.argv[1] in {"RealTrade", "DemoTrade", "Batch"}:
+    if len(sys.argv) > 2 and sys.argv[1] in {"RealTrade", "DemoTrade", "Batch"}:
         run_mode = sys.argv[1]
+        rule = sys.argv[2]
     else:
         applog.error("bad argument!")
         sys.exit()
 
-    trader = Trader()
-    trader.trade(run_mode)
+    seesaw = Seesaw(rule)
+    seesaw.trade(run_mode)

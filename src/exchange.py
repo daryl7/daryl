@@ -39,9 +39,10 @@ def fetch_url(req, max_times=100, sleep_sec=10):
 
 
 class Exchange:
-    def __init__(self):
+    def __init__(self, target_currency, base_currency):
         self.ask = 0
         self.bid = 0
+        self.symbol = target_currency + "_" + self.get_legal() if base_currency == "LEGAL" else base_currency
 
     def validation_check(self, is_log = False):
         if self.ask == 0 or self.bid == 0 or self.ask < self.bid:
@@ -50,12 +51,39 @@ class Exchange:
             return False
         return True
 
+    def web_symbol(self):
+        return self.symbol
+
+    def get_name(self):
+        return self.__class__.__name__
+
+    def get_target_currency(self):
+        return self.symbol.split("_")[0]
+
+    def get_base_currency(self):
+        return self.symbol.split("_")[1]
+
+    def get_legal(self):
+        raise "need override"
+
+    def to_jpy(self, usdjpy):
+        raise "need override"
+
+    def health_check(self, dryrun):
+        raise "need override"
+
 
 class BitFlyer(Exchange):
     __api_endpoint = 'https://api.bitflyer.jp'
 
-    def __init__(self):
-        super(BitFlyer, self).__init__()
+    def __init__(self, target_currency, base_currency):
+        super(BitFlyer, self).__init__(target_currency, base_currency)
+
+    def get_legal(self):
+        return "JPY"
+
+    def to_jpy(self, usdjpy):
+        return self.bid, self.ask
 
     @staticmethod
     def __urlopen(method, path, *, param=None, data={}):
@@ -95,7 +123,7 @@ class BitFlyer(Exchange):
         return fetch_url(req)
 
     def refresh_ticker(self):
-        with BitFlyer.__urlopen_public("GET", "/v1/ticker", param = {"product_code":"BTC_JPY"}) as res:
+        with BitFlyer.__urlopen_public("GET", "/v1/ticker", param = {"product_code":self.web_symbol()}) as res:
             html = res.read().decode("utf-8")
             self.bid = int(json.loads(html)["best_bid"])
             self.ask = int(json.loads(html)["best_ask"])
@@ -207,12 +235,22 @@ class CoinCheck(Exchange):
 class Binance(Exchange):
     __api_endpoint = "https://api.binance.com"
 
-    def __init__(self):
-        super(Binance, self).__init__()
+    def __init__(self, target_currency, base_currency):
+        super(Binance, self).__init__(target_currency, base_currency)
         self.client = binance.client.Client(config['binance']['api_key'], config['binance']['api_secret'])
         self.comission_fee = config['binance']['comission_fee']
         self.all_ticker_hash = {}
         self.exchange_info_hash = {}
+
+    def web_symbol(self):
+        r = self.symbol.split("_")
+        return r[0] + r[1]
+
+    def get_legal(self):
+        return "USDT"
+
+    def to_jpy(self, usdjpy):
+        return self.bid * usdjpy, self.ask * usdjpy
 
     @staticmethod
     def __urlopen_public(method, path, *, param={}):
@@ -225,7 +263,7 @@ class Binance(Exchange):
         return fetch_url(req)
 
     def refresh_ticker(self):
-        with Binance.__urlopen_public("GET", "/api/v3/ticker/bookTicker", param = {"symbol":"BTCUSDT"}) as res:
+        with Binance.__urlopen_public("GET", "/api/v3/ticker/bookTicker", param = {"symbol":self.web_symbol()}) as res:
             html = res.read().decode("utf-8")
             self.bid = float(json.loads(html)["bidPrice"])
             self.ask = float(json.loads(html)["askPrice"])

@@ -1,0 +1,39 @@
+{
+    // IntelliSense を使用して利用可能な属性を学べます。
+    // 既存の属性の説明をホバーして表示します。
+    // 詳細情報は次を確認してください: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Triangular - Integrated Terminal/Console",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/triangular.py",
+            "console": "integratedTerminal",
+            "args": [
+                "DemoTrade",
+            ]
+        },
+        {
+            "name": "DemoTrade - Integrated Terminal/Console",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/trader.py",
+            "console": "integratedTerminal",
+            "args": [
+                "DemoTrade",
+            ]
+        },
+        {
+            "name": "Seesaw",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/seesaw.py",
+            "console": "integratedTerminal",
+            "args": [
+                "DemoTrade",
+                "BTC_LEGAL_BitFlyer_Binance",
+            ]
+        },
+    ]
+}

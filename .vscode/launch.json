@@ -5,20 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Triangular - Integrated Terminal/Console",
+            "name": "Triangular",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/src/triangular.py",
-            "console": "integratedTerminal",
-            "args": [
-                "DemoTrade",
-            ]
-        },
-        {
-            "name": "DemoTrade - Integrated Terminal/Console",
-            "type": "python",
-            "request": "launch",
-            "program": "${workspaceFolder}/src/trader.py",
             "console": "integratedTerminal",
             "args": [
                 "DemoTrade",

@@ -72,6 +72,12 @@ class Exchange:
     def health_check(self, dryrun):
         raise "need override"
 
+    def buy_order_from_available_balance(self, legal_lot, price_tension, dryrun):
+        raise "need override"
+
+    def sell_order_from_available_balance(self, lot, price_tension, dryrun):
+        raise "need override"
+
 
 class BitFlyer(Exchange):
     __api_endpoint = 'https://api.bitflyer.jp'
@@ -165,8 +171,8 @@ class BitFlyer(Exchange):
                     break
         return [child_order_acceptance_id, commission]
 
-    def buy_order_from_available_balance(self, jpy, dryrun):
-        price = self.ask + config['trader']['order_offset_jpy']
+    def buy_order_from_available_balance(self, jpy, price_tension, dryrun):
+        price = self.ask + price_tension
         lot = round(jpy / float(price), 8)
         if not dryrun:
             body = {
@@ -187,8 +193,8 @@ class BitFlyer(Exchange):
         self.last_buy_commission = commission
         return "\tbuy_order:BitFlyer, price:" + str(price) + ", lot:" + str(lot) + ", commission:" + str(commission) + ", child_order_acceptance_id:" + child_order_acceptance_id
 
-    def sell_order_from_available_balance(self, lot, dryrun):
-        price = self.bid - config['trader']['order_offset_jpy']
+    def sell_order_from_available_balance(self, lot, price_tension, dryrun):
+        price = self.bid - price_tension
         if not dryrun:
             body = {
                 "product_code": "BTC_JPY",
@@ -309,8 +315,8 @@ class Binance(Exchange):
         # TODO: implement
         return True
 
-    def buy_order_from_available_balance(self, usd, dryrun):
-        price = self.ask + config['trader']['order_offset_usd']
+    def buy_order_from_available_balance(self, usd, price_tension, dryrun):
+        price = self.ask + price_tension
         lot = round(usd / float(price), 6)
         if(not dryrun):
             order = self.client.create_order(
@@ -325,8 +331,8 @@ class Binance(Exchange):
         self.last_buy_comission = round(lot * self.comission_fee, 8)
         return "\tbuy_order: Binance, " + str(price) + ", " + str(lot)
 
-    def sell_order_from_available_balance(self, lot, dryrun):
-        price = self.bid - config['trader']['order_offset_usd']
+    def sell_order_from_available_balance(self, lot, price_tension, dryrun):
+        price = self.bid - price_tension
         if(not dryrun):
             order = self.client.create_order(
                 symbol = 'BTCUSDT',

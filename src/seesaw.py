@@ -33,11 +33,6 @@ class Seesaw:
 
         self.legal_tender = LegalTender()
 
-        with open('config.yml', 'r') as yml:
-            config = yaml.load(yml)
-            self.order_offset_jpy = config['trader']['order_offset_jpy']
-            self.order_offset_usd = config['trader']['order_offset_usd']
-
     def trade(self, run_mode):
         mailer = Mailer()
         if mailer.is_use():
@@ -49,8 +44,6 @@ class Seesaw:
 
         applog.info("========================================")
         applog.info("Start Trader. RunMode = " + run_mode)
-        applog.info("order_offset_jpy = " + str(self.order_offset_jpy))
-        applog.info("order_offset_usd = " + str(self.order_offset_usd))
         applog.info("notification_email_to = " + mailer.notification_email_to)
         applog.info("notification_email_from = " + mailer.notification_email_from)
         applog.info("notification_email_subject = " + mailer.notification_email_subject)
@@ -148,8 +141,16 @@ class Position:
             if seesaw.health_check(dryrun):
                 execution = True
                 message1 = "%s->%s(%s, diff:%0.8f)" % (seesaw.exchange1.get_name(), seesaw.exchange2.get_name(), seesaw.dt, seesaw.diff_ex1_ex2)
-                message2 = seesaw.exchange1.sell_order_from_available_balance(pair[seesaw.exchange1.get_name()]["balance"][seesaw.exchange1.get_target_currency()], dryrun)
-                message3 = seesaw.exchange2.buy_order_from_available_balance(pair[seesaw.exchange2.get_name()]["balance"][seesaw.exchange2.get_base_currency()], dryrun)
+                message2 = seesaw.exchange1.sell_order_from_available_balance(
+                    pair[seesaw.exchange1.get_name()]["balance"][seesaw.exchange1.get_target_currency()],
+                    pair[seesaw.exchange1.get_name()]["price_tension"],
+                    dryrun
+                )
+                message3 = seesaw.exchange2.buy_order_from_available_balance(
+                    pair[seesaw.exchange2.get_name()]["balance"][seesaw.exchange2.get_base_currency()],
+                    pair[seesaw.exchange2.get_name()]["price_tension"],
+                    dryrun
+                )
                 row.extend([
                     "SELL",
                     str(seesaw.exchange1.last_sell_price),
@@ -167,8 +168,16 @@ class Position:
             if seesaw.health_check(dryrun):
                 execution = True
                 message1 = "%s->%s(%s, diff:%0.8f)" % (seesaw.exchange2.get_name(), seesaw.exchange1.get_name(), seesaw.dt, seesaw.diff_ex2_ex1)
-                message2 = seesaw.exchange1.buy_order_from_available_balance(pair[seesaw.exchange1.get_name()]["balance"][seesaw.exchange1.get_base_currency()], dryrun)
-                message3 = seesaw.exchange2.sell_order_from_available_balance(pair[seesaw.exchange2.get_name()]["balance"][seesaw.exchange2.get_target_currency()], dryrun)
+                message2 = seesaw.exchange1.buy_order_from_available_balance(
+                    pair[seesaw.exchange1.get_name()]["balance"][seesaw.exchange1.get_base_currency()],
+                    pair[seesaw.exchange1.get_name()]["price_tension"],
+                    dryrun
+                )
+                message3 = seesaw.exchange2.sell_order_from_available_balance(
+                    pair[seesaw.exchange2.get_name()]["balance"][seesaw.exchange2.get_target_currency()],
+                    pair[seesaw.exchange2.get_name()]["price_tension"],
+                    dryrun
+                )
                 row.extend([
                     "BUY",
                     str(seesaw.exchange1.last_buy_price),

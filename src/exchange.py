@@ -333,6 +333,7 @@ class Binance(Exchange):
 
     def sell_order_from_available_balance(self, lot, price_tension, dryrun):
         price = self.bid - price_tension
+        lot = round(lot, 6)
         if(not dryrun):
             order = self.client.create_order(
                 symbol = 'BTCUSDT',

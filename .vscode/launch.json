@@ -23,6 +23,7 @@
             "args": [
                 "DemoTrade",
                 "BTC_LEGAL_BitFlyer_Binance",
+                "--echo",
             ]
         },
     ]

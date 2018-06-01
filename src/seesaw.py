@@ -1,3 +1,13 @@
+"""Usage:
+    seesaw.py <run_mode> <rule> [--echo]
+    seesaw.py -h | --help
+
+Options:
+    --echo                   Echo refresh message to stdout.
+    -h --help                Show this screen and exit.
+"""
+
+from docopt import docopt
 import time
 import os
 import glob
@@ -20,8 +30,9 @@ class LogFiles:
 
 
 class Seesaw:
-    def __init__(self, rule):
+    def __init__(self, rule, is_echo):
         self.rule = rule
+        self.is_echo = is_echo
 
         r = rule.split("_")
         target_currency = r[0]
@@ -93,7 +104,9 @@ class Seesaw:
             self.diff_ex1_ex2 = self.exchange1.bid - self.exchange2.ask
             self.diff_ex2_ex1 = self.exchange2.bid - self.exchange1.ask
             res = '\t'.join([self.dt, str(self.diff_ex1_ex2), str(self.diff_ex2_ex1), str(self.exchange1.bid), str(self.exchange1.ask), str(self.exchange2.bid), str(self.exchange2.ask)])
-        print(res)
+
+        if self.is_echo:
+            print(res)
 
         with open(self.__prepare_log_filepath(self.rule), mode = 'a', encoding = 'utf-8') as fh:
             fh.write(res + '\n')
@@ -240,14 +253,16 @@ class Position:
 
 
 if __name__ == '__main__':
-    applog.init(Config.get_log_dir() + "/app.log",)
+    args = docopt(__doc__)
 
-    if len(sys.argv) > 2 and sys.argv[1] in {"RealTrade", "DemoTrade", "Batch"}:
-        run_mode = sys.argv[1]
-        rule = sys.argv[2]
-    else:
+    applog.init(Config.get_log_dir() + "/app.log")
+
+    run_mode = args["<run_mode>"]
+    if not run_mode in {"RealTrade", "DemoTrade"}:
         applog.error("bad argument!")
         sys.exit()
 
-    seesaw = Seesaw(rule)
+    rule = args["<rule>"]
+
+    seesaw = Seesaw(rule, args["--echo"])
     seesaw.trade(run_mode)

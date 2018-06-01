@@ -130,16 +130,22 @@ class Seesaw:
 
 
 class Position:
+    __reach_max_count = 2
+
     def __init__(self, hash):
         self.hash = hash
+        self.reach = 0
 
     def decision_and_order(self, seesaw, dryrun):
         execution = False
         pair = self.hash["pair"]
         row = [seesaw.dt, str(seesaw.diff_ex1_ex2), str(seesaw.diff_ex2_ex1), str(seesaw.exchange1.bid), str(seesaw.exchange1.ask), str(seesaw.exchange2.bid), str(seesaw.exchange2.ask), str(seesaw.usdjpy)]
         if self.hash["coin_status"] == seesaw.exchange1.get_name() and seesaw.diff_ex1_ex2 >= pair[seesaw.exchange1.get_name()]["limit_diff_other_one"]:
-            if seesaw.health_check(dryrun):
+            self.reach += 1
+            applog.info("Reach position(%s). Count is %d." % (self.hash["_position"], self.reach))
+            if seesaw.health_check(dryrun) and self.reach >= self.__reach_max_count:
                 execution = True
+                self.reach = 0
                 message1 = "%s->%s(%s, diff:%0.8f)" % (seesaw.exchange1.get_name(), seesaw.exchange2.get_name(), seesaw.dt, seesaw.diff_ex1_ex2)
                 message2 = seesaw.exchange1.sell_order_from_available_balance(
                     pair[seesaw.exchange1.get_name()]["balance"][seesaw.exchange1.get_target_currency()],
@@ -165,8 +171,11 @@ class Position:
                 self.exchange_balance(seesaw.exchange2, "BUY")
                 self.hash["coin_status"] = seesaw.exchange2.get_name()
         elif self.hash["coin_status"] == seesaw.exchange2.get_name() and seesaw.diff_ex2_ex1 >= pair[seesaw.exchange2.get_name()]["limit_diff_other_one"]:
-            if seesaw.health_check(dryrun):
+            self.reach += 1
+            applog.info("Reach position(%s). Count is %d." % (self.hash["_position"], self.reach))
+            if seesaw.health_check(dryrun) and self.reach >= self.__reach_max_count:
                 execution = True
+                self.reach = 0
                 message1 = "%s->%s(%s, diff:%0.8f)" % (seesaw.exchange2.get_name(), seesaw.exchange1.get_name(), seesaw.dt, seesaw.diff_ex2_ex1)
                 message2 = seesaw.exchange1.buy_order_from_available_balance(
                     pair[seesaw.exchange1.get_name()]["balance"][seesaw.exchange1.get_base_currency()],

@@ -75,7 +75,7 @@ class Seesaw:
                 time.sleep(3)
         except Exception as e:
             applog.error(traceback.format_exc())
-            mailer.sendmail(traceback.format_exc())
+            mailer.sendmail(traceback.format_exc(), "Assertion - Daryl Trade")
 
     def refresh(self, limit_second = 3):
         start_t = datetime.now()

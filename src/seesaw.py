@@ -228,7 +228,7 @@ class Position:
 
             mailer = Mailer()
             if mailer.is_use():
-                mailer.sendmail(message1 + "\n" + message2 + "\n" + message3, "Daryl Trade - %s" % self.rule)
+                mailer.sendmail(message1 + "\n" + message2 + "\n" + message3, "Daryl Trade - %s" % seesaw.rule)
 
         return execution
 

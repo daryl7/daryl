@@ -60,7 +60,6 @@ class Seesaw:
         applog.info("Start Trader. Interval = " + str(self.interval))
         applog.info("notification_email_to = " + mailer.notification_email_to)
         applog.info("notification_email_from = " + mailer.notification_email_from)
-        applog.info("notification_email_subject = " + mailer.notification_email_subject)
         for position in self.positions:
             applog.info(position.hash)
         applog.info("========================================")
@@ -78,7 +77,7 @@ class Seesaw:
                 time.sleep(self.interval)
         except Exception as e:
             applog.error(traceback.format_exc())
-            mailer.sendmail(traceback.format_exc(), "Assertion - Daryl Trade")
+            mailer.sendmail(traceback.format_exc(), "Assertion - Daryl Trade - %s" % self.rule)
 
     def refresh(self, limit_second = 3):
         start_t = datetime.now()
@@ -229,7 +228,7 @@ class Position:
 
             mailer = Mailer()
             if mailer.is_use():
-                mailer.sendmail(message1 + "\n" + message2 + "\n" + message3)
+                mailer.sendmail(message1 + "\n" + message2 + "\n" + message3, "Daryl Trade - %s" % self.rule)
 
         return execution
 

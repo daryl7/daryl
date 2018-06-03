@@ -1,9 +1,10 @@
 """Usage:
-    seesaw.py <run_mode> <rule> [--echo]
+    seesaw.py <run_mode> <rule> [--echo] [--interval <second>]
     seesaw.py -h | --help
 
 Options:
     --echo                   Echo refresh message to stdout.
+    --interval <second>      Monitoring Interval.
     -h --help                Show this screen and exit.
 """
 
@@ -30,9 +31,10 @@ class LogFiles:
 
 
 class Seesaw:
-    def __init__(self, rule, is_echo):
+    def __init__(self, rule, is_echo, interval):
         self.rule = rule
         self.is_echo = is_echo
+        self.interval = 3 if interval is None else int(interval)
 
         r = rule.split("_")
         target_currency = r[0]
@@ -55,6 +57,7 @@ class Seesaw:
 
         applog.info("========================================")
         applog.info("Start Trader. RunMode = " + run_mode)
+        applog.info("Start Trader. Interval = " + str(self.interval))
         applog.info("notification_email_to = " + mailer.notification_email_to)
         applog.info("notification_email_from = " + mailer.notification_email_from)
         applog.info("notification_email_subject = " + mailer.notification_email_subject)
@@ -72,7 +75,7 @@ class Seesaw:
                                 execution = True
                         if execution:
                             self.save_positions()
-                time.sleep(3)
+                time.sleep(self.interval)
         except Exception as e:
             applog.error(traceback.format_exc())
             mailer.sendmail(traceback.format_exc(), "Assertion - Daryl Trade")
@@ -269,5 +272,5 @@ if __name__ == '__main__':
 
     rule = args["<rule>"]
 
-    seesaw = Seesaw(rule, args["--echo"])
+    seesaw = Seesaw(rule, args["--echo"], args["--interval"])
     seesaw.trade(run_mode)

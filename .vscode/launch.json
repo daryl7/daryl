@@ -36,6 +36,7 @@
                 "DemoTrade",
                 "XEM_BTC_Binance_Poloniex",
                 "--echo",
+                "--interval", "5",
             ]
         },
     ]

@@ -15,7 +15,7 @@
             ]
         },
         {
-            "name": "Seesaw",
+            "name": "Seesaw - BTC_LEGAL",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/src/seesaw.py",
@@ -23,6 +23,18 @@
             "args": [
                 "DemoTrade",
                 "BTC_LEGAL_BitFlyer_Binance",
+                "--echo",
+            ]
+        },
+        {
+            "name": "Seesaw - XEM_BTC",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/seesaw.py",
+            "console": "integratedTerminal",
+            "args": [
+                "DemoTrade",
+                "XEM_BTC_Binance_Poloniex",
                 "--echo",
             ]
         },

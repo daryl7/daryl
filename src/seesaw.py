@@ -101,9 +101,10 @@ class Seesaw:
             self.diff_ex2_ex1 = int(ex2_bid_jpy - ex1_ask_jpy)
             res = '\t'.join([self.dt, str(self.diff_ex1_ex2), str(self.diff_ex2_ex1), str(self.exchange1.bid), str(self.exchange1.ask), str(self.exchange2.bid), str(self.exchange2.ask), str(self.usdjpy)])
         else:
+            self.usdjpy = 0
             self.diff_ex1_ex2 = self.exchange1.bid - self.exchange2.ask
             self.diff_ex2_ex1 = self.exchange2.bid - self.exchange1.ask
-            res = '\t'.join([self.dt, str(self.diff_ex1_ex2), str(self.diff_ex2_ex1), str(self.exchange1.bid), str(self.exchange1.ask), str(self.exchange2.bid), str(self.exchange2.ask)])
+            res = '\t'.join([self.dt, str8(self.diff_ex1_ex2), str8(self.diff_ex2_ex1), str8(self.exchange1.bid), str8(self.exchange1.ask), str8(self.exchange2.bid), str8(self.exchange2.ask)])
 
         if self.is_echo:
             print(res)
@@ -250,6 +251,10 @@ class Position:
             assert not float(pair[exchange.get_name()]["balance"][exchange.get_target_currency()]) == 0.0, "target_currency is 0"
             pair[exchange.get_name()]["balance"][exchange.get_base_currency()] = float(pair[exchange.get_name()]["balance"][exchange.get_target_currency()]) * exchange.last_sell_price
             pair[exchange.get_name()]["balance"][exchange.get_target_currency()] = 0.0
+
+
+def str8(v):
+    return "%0.8f" % v
 
 
 if __name__ == '__main__':

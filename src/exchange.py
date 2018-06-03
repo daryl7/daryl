@@ -42,7 +42,7 @@ class Exchange:
     def __init__(self, target_currency, base_currency):
         self.ask = 0
         self.bid = 0
-        self.symbol = target_currency + "_" + self.get_legal() if base_currency == "LEGAL" else base_currency
+        self.symbol = target_currency + "_" + self.get_legal() if base_currency == "LEGAL" else target_currency + "_" + base_currency
 
     def validation_check(self, is_log = False):
         if self.ask == 0 or self.bid == 0 or self.ask < self.bid:
@@ -67,6 +67,9 @@ class Exchange:
         raise "need override"
 
     def to_jpy(self, usdjpy):
+        raise "need override"
+
+    def refresh_ticker(self):
         raise "need override"
 
     def health_check(self, dryrun):
@@ -367,8 +370,12 @@ class Binance(Exchange):
 class Poloniex(Exchange):
     __api_endpoint = "https://poloniex.com"
 
-    def __init__(self):
-        super(Poloniex, self).__init__()
+    def __init__(self, target_currency, base_currency):
+        super(Poloniex, self).__init__(target_currency, base_currency)
+
+    def web_symbol(self):
+        r = self.symbol.split("_")
+        return r[1] + "_" + r[0]
 
     @staticmethod
     def __urlopen_public(method, path, *, param={}):
@@ -382,6 +389,27 @@ class Poloniex(Exchange):
         with Poloniex.__urlopen_public("GET", "/public", param = {"command":"returnTicker"}) as res:
             html = res.read().decode("utf-8")
             return json.loads(html)
+
+    def get_legal(self):
+        return "USDT"
+
+    def to_jpy(self, usdjpy):
+        return self.bid * usdjpy, self.ask * usdjpy
+
+    def refresh_ticker(self):
+        ticker = self.refresh_ticker_all()[self.web_symbol()]
+        self.bid = float(ticker["highestBid"])
+        self.ask = float(ticker["lowestAsk"])
+
+    def health_check(self, dryrun):
+        # TODO: implement
+        return True
+
+    def buy_order_from_available_balance(self, legal_lot, price_tension, dryrun):
+        raise "need override"
+
+    def sell_order_from_available_balance(self, lot, price_tension, dryrun):
+        raise "need override"
 
 
 class LegalTender:

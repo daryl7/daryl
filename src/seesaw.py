@@ -42,11 +42,16 @@ class Seesaw:
         self.exchange1 = getattr(exchange, r[2])(target_currency, base_currency)
         self.exchange2 = getattr(exchange, r[3])(target_currency, base_currency)
         self.context_filepath = "./context/seesaw/" + rule + ".yml"
+        self.lock_filepath = "./context/seesaw/" + rule + ".lock"
         self.load_positions()
 
         self.legal_tender = LegalTender()
 
     def trade(self, run_mode):
+        if self.is_lock():
+            applog.error("locked")
+            raise Exception
+
         mailer = Mailer()
         if mailer.is_use():
             if not mailer.checkmailer():
@@ -70,8 +75,15 @@ class Seesaw:
                     if self.validation_check():
                         execution = False
                         for position in self.positions:
-                            if position.decision_and_order(self, dryrun):
-                                execution = True
+                            try:
+                                if position.decision_and_order(self, dryrun):
+                                    execution = True
+                            except Exception as e:
+                                trace_msg = traceback.format_exc()
+                                self.lock(trace_msg)
+                                applog.error(trace_msg)
+                                mailer.sendmail(traceback.format_exc(), "Assertion - Daryl Trade - %s" % self.rule)
+                                sys.exit()
                         if execution:
                             self.save_positions()
                 time.sleep(self.interval)
@@ -135,6 +147,13 @@ class Seesaw:
             yml_positions.append(position.hash)
         with open(self.context_filepath, 'w') as yml:
             yml.write(yaml.dump(yml_positions, default_flow_style=False))
+
+    def lock(self, message):
+        with open(self.lock_filepath, 'w') as yml:
+            yml.write(message)
+
+    def is_lock(self):
+        return os.path.exists(self.lock_filepath)
 
     def __prepare_log_filepath(self, name):
         date = datetime.now().strftime("%Y-%m-%d")

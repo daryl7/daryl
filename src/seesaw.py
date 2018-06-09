@@ -82,7 +82,7 @@ class Seesaw:
                                 trace_msg = traceback.format_exc()
                                 self.lock(trace_msg)
                                 applog.error(trace_msg)
-                                mailer.sendmail(traceback.format_exc(), "Assertion - Daryl Trade - %s" % self.rule)
+                                mailer.sendmail(traceback.format_exc(), "Critical Assertion - Daryl Trade - %s" % self.rule)
                                 sys.exit()
                         if execution:
                             self.save_positions()

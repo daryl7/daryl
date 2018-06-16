@@ -283,7 +283,8 @@ if __name__ == '__main__':
 
     rule = args["<rule>"]
 
-    applog.init(Config.get_log_dir() + "/seesaw/%s.log" % rule)
+    date = datetime.now().strftime("%Y-%m-%d")
+    applog.init(Config.get_log_dir() + "/seesaw/%s_%s.log" % (rule, date))
 
     run_mode = args["<run_mode>"]
     if not run_mode in {"RealTrade", "DemoTrade"}:

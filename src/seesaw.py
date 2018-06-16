@@ -281,14 +281,14 @@ def str8(v):
 if __name__ == '__main__':
     args = docopt(__doc__)
 
-    applog.init(Config.get_log_dir() + "/app.log")
+    rule = args["<rule>"]
+
+    applog.init(Config.get_log_dir() + "/seesaw/%s.log" % rule)
 
     run_mode = args["<run_mode>"]
     if not run_mode in {"RealTrade", "DemoTrade"}:
         applog.error("bad argument!")
         sys.exit()
-
-    rule = args["<rule>"]
 
     seesaw = Seesaw(rule, args["--echo"], args["--interval"])
     seesaw.trade(run_mode)

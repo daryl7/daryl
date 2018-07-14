@@ -81,6 +81,9 @@ class Exchange:
     def sell_order_from_available_balance(self, lot, price_tension, dryrun):
         raise "need override"
 
+    def is_order_completed(self, order_id):
+        raise "need override"
+
 
 class BitFlyer(Exchange):
     __api_endpoint = 'https://api.bitflyer.jp'
@@ -194,6 +197,7 @@ class BitFlyer(Exchange):
         self.last_buy_price = price
         self.last_buy_lot = lot
         self.last_buy_commission = commission
+        self.last_order_id = child_order_acceptance_id
         return "\tbuy_order:BitFlyer, price:" + str(price) + ", lot:" + str(lot) + ", commission:" + str(commission) + ", child_order_acceptance_id:" + child_order_acceptance_id
 
     def sell_order_from_available_balance(self, lot, price_tension, dryrun):
@@ -215,7 +219,19 @@ class BitFlyer(Exchange):
         self.last_sell_price = price
         self.last_sell_lot = lot
         self.last_sell_commission = commission
+        self.last_order_id = child_order_acceptance_id
         return "\tsell_order:BitFlyer, price:" + str(price) + ", lot:" + str(lot) + ", commission:" + str(commission) + ", child_order_acceptance_id:" + child_order_acceptance_id
+
+    def is_order_completed(self, order_id):
+        if order_id == "demo":
+            return True
+        with BitFlyer.__urlopen("GET", "/v1/me/getchildorders", param = {"child_order_acceptance_id":order_id}) as res:
+            html = res.read().decode("utf-8")
+            if len(json.loads(html)) > 0:
+                applog.info(html)
+                if json.loads(html)[0]["child_order_state"] == "COMPLETED":
+                    return True
+        return False
 
 
 class CoinCheck(Exchange):
@@ -329,6 +345,10 @@ class Binance(Exchange):
                 timeInForce = binance.client.Client.TIME_IN_FORCE_GTC,
                 quantity = lot,
                 price = price )
+            applog.info(order)
+            self.last_order_id = order["clientOrderId"]
+        else:
+            self.last_order_id = "demo"
         self.last_buy_price = price
         self.last_buy_lot = lot
         self.last_buy_comission = round(lot * self.comission_fee, 8)
@@ -345,10 +365,20 @@ class Binance(Exchange):
                 timeInForce = binance.client.Client.TIME_IN_FORCE_GTC,
                 quantity = lot,
                 price = price )
+            applog.info(order)
+            self.last_order_id = order["clientOrderId"]
+        else:
+            self.last_order_id = "demo"
         self.last_sell_price = price
         self.last_sell_lot = lot
         self.last_sell_comission = round(lot * self.comission_fee, 8)
         return "\tsell_order: Binance, " + str(price) + ", " + str(lot)
+
+    def is_order_completed(self, order_id):
+        if order_id == "demo":
+            return True
+        r = self.client.get_order('BTCUSDT', order_id)
+        return r["status"] == binance.client.Client.ORDER_STATUS_FILLED
 
     def order(self, symbol, side, _type, time_in_force, lot, price):
         return self.client.create_order(
@@ -409,6 +439,9 @@ class Poloniex(Exchange):
         raise "need override"
 
     def sell_order_from_available_balance(self, lot, price_tension, dryrun):
+        raise "need override"
+
+    def is_order_completed(self, order_id):
         raise "need override"
 
 

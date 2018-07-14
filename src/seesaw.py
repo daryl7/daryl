@@ -76,6 +76,7 @@ class Seesaw:
                         execution = False
                         for position in self.positions:
                             try:
+                                position.complete_check(self)
                                 if position.decision_and_order(self, dryrun):
                                     execution = True
                             except Exception as e:
@@ -205,6 +206,8 @@ class Position:
                 self.exchange_balance(seesaw.exchange1, "SELL")
                 self.exchange_balance(seesaw.exchange2, "BUY")
                 self.hash["coin_status"] = seesaw.exchange2.get_name()
+                pair[seesaw.exchange1.get_name()]["order_id"] = seesaw.exchange1.last_order_id
+                pair[seesaw.exchange2.get_name()]["order_id"] = seesaw.exchange2.last_order_id
         elif self.hash["coin_status"] == seesaw.exchange2.get_name() and seesaw.diff_ex2_ex1 >= pair[seesaw.exchange2.get_name()]["limit_diff_other_one"]:
             self.reach += 1
             applog.info("Reach position(%s). Count is %d." % (self.hash["_position"], self.reach))
@@ -235,6 +238,8 @@ class Position:
                 self.exchange_balance(seesaw.exchange1, "BUY")
                 self.exchange_balance(seesaw.exchange2, "SELL")
                 self.hash["coin_status"] = seesaw.exchange1.get_name()
+                pair[seesaw.exchange1.get_name()]["order_id"] = seesaw.exchange1.last_order_id
+                pair[seesaw.exchange2.get_name()]["order_id"] = seesaw.exchange2.last_order_id
 
         if execution:
             self.trade_log(row, self.hash["_position"])
@@ -272,6 +277,24 @@ class Position:
             assert not float(pair[exchange.get_name()]["balance"][exchange.get_target_currency()]) == 0.0, "target_currency is 0"
             pair[exchange.get_name()]["balance"][exchange.get_base_currency()] = float(pair[exchange.get_name()]["balance"][exchange.get_target_currency()]) * exchange.last_sell_price
             pair[exchange.get_name()]["balance"][exchange.get_target_currency()] = 0.0
+
+    def complete_check(self, seesaw):
+        exc1 = self.hash["pair"][seesaw.exchange1.get_name()]
+        exc2 = self.hash["pair"][seesaw.exchange2.get_name()]
+        if "order_id" in exc1 or "order_id" in exc2:
+            if not exc1["order_id"] is None:
+                if seesaw.exchange1.is_order_completed(exc1["order_id"]):
+                    exc1.pop("order_id")
+                    seesaw.save_positions()
+            if not exc2["order_id"] is None:
+                if seesaw.exchange2.is_order_completed(exc2["order_id"]):
+                    exc2.pop("order_id")
+                    seesaw.save_positions()
+
+            if not("order_id" in exc1 or "order_id" in exc2):
+                mailer = Mailer()
+                if mailer.is_use():
+                    mailer.sendmail("completed.", "Daryl Trade - %s" % seesaw.rule)
 
 
 def str8(v):

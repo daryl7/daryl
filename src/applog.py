@@ -4,6 +4,10 @@ import os
 
 
 def init(filepath):
+    dir = os.path.dirname(filepath)
+    if not os.path.exists(dir):
+        os.makedirs(dir)
+
     logging.basicConfig(
         level = Config.get_applog_level(),
         filename = filepath,

@@ -377,7 +377,7 @@ class Binance(Exchange):
     def is_order_completed(self, order_id):
         if order_id == "demo":
             return True
-        r = self.client.get_order('BTCUSDT', order_id)
+        r = self.get_order('BTCUSDT', order_id)
         return r["status"] == binance.client.Client.ORDER_STATUS_FILLED
 
     def order(self, symbol, side, _type, time_in_force, lot, price):

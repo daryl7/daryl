@@ -282,11 +282,11 @@ class Position:
         exc1 = self.hash["pair"][seesaw.exchange1.get_name()]
         exc2 = self.hash["pair"][seesaw.exchange2.get_name()]
         if "order_id" in exc1 or "order_id" in exc2:
-            if not exc1["order_id"] is None:
+            if "order_id" in exc1:
                 if seesaw.exchange1.is_order_completed(exc1["order_id"]):
                     exc1.pop("order_id")
                     seesaw.save_positions()
-            if not exc2["order_id"] is None:
+            if "order_id" in exc2:
                 if seesaw.exchange2.is_order_completed(exc2["order_id"]):
                     exc2.pop("order_id")
                     seesaw.save_positions()

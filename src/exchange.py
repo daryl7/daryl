@@ -346,7 +346,7 @@ class Binance(Exchange):
                 quantity = lot,
                 price = price )
             applog.info(order)
-            self.last_order_id = order["clientOrderId"]
+            self.last_order_id = order["orderId"]
         else:
             self.last_order_id = "demo"
         self.last_buy_price = price
@@ -366,7 +366,7 @@ class Binance(Exchange):
                 quantity = lot,
                 price = price )
             applog.info(order)
-            self.last_order_id = order["clientOrderId"]
+            self.last_order_id = order["orderId"]
         else:
             self.last_order_id = "demo"
         self.last_sell_price = price

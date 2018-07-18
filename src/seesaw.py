@@ -252,7 +252,7 @@ class Position:
 
             mailer = Mailer()
             if mailer.is_use():
-                mailer.sendmail(message1 + "\n" + message2 + "\n" + message3, "Daryl Trade - %s" % seesaw.rule)
+                mailer.sendmail(message1 + "\n" + message2 + "\n" + message3, "Daryl Trade - %s - %s" % (seesaw.rule, self.hash["_position"]))
 
         return execution
 
@@ -294,7 +294,7 @@ class Position:
             if not("order_id" in exc1 or "order_id" in exc2):
                 mailer = Mailer()
                 if mailer.is_use():
-                    mailer.sendmail("completed.", "Daryl Trade - %s" % seesaw.rule)
+                    mailer.sendmail("completed.", "Daryl Trade - %s - %s" % (seesaw.rule, self.hash["_position"]))
 
 
 def str8(v):

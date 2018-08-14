@@ -39,5 +39,15 @@
                 "--interval", "5",
             ]
         },
+        {
+            "name": "Seesaw/UpdateLatestSituation - BTC_LEGAL",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/seesaw/update_latest_situation.py",
+            "console": "integratedTerminal",
+            "args": [
+                "BTC_LEGAL_BitFlyer_Binance",
+            ]
+        },
     ]
 }

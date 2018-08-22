@@ -41,7 +41,7 @@ def get_max_line(input_tsv_filepath, f, hors):
     for path in input_files:
         filetime = repatter.search(path)  # Extract date from filepath
         if filetime:
-            ft = datetime.strptime(filetime.group(0) + " 23:59:59", "%Y-%m-%d %H:%M:%S")
+            ft = datetime.strptime(filetime.group(0) + " 00:00:00", "%Y-%m-%d %H:%M:%S")
             if (now - ft).total_seconds() < hors * 60 * 60:
                 print(filetime)
                 tsv = csv.reader(open(path, "r"), delimiter = '\t')
@@ -69,13 +69,13 @@ if __name__ == '__main__':
         txt.write("\n")
 
         txt.write("=== exchange1 MAX ===\n")
-        txt.write("1day : " + get_max_line(input_tsv_filepath, lambda row: float(row[1]), 24) + "\n")
+        txt.write("today: " + get_max_line(input_tsv_filepath, lambda row: float(row[1]), 24) + "\n")
         txt.write("3days: " + get_max_line(input_tsv_filepath, lambda row: float(row[1]), 24 * 3) + "\n")
         txt.write("7days: " + get_max_line(input_tsv_filepath, lambda row: float(row[1]), 24 * 7) + "\n")
         txt.write("\n")
 
         txt.write("=== exchange2 MAX ===\n")
-        txt.write("1day : " + get_max_line(input_tsv_filepath, lambda row: float(row[2]), 24) + "\n")
+        txt.write("today: " + get_max_line(input_tsv_filepath, lambda row: float(row[2]), 24) + "\n")
         txt.write("3days: " + get_max_line(input_tsv_filepath, lambda row: float(row[2]), 24 * 3) + "\n")
         txt.write("7days: " + get_max_line(input_tsv_filepath, lambda row: float(row[2]), 24 * 7) + "\n")
         txt.write("\n")

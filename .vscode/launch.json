@@ -18,7 +18,7 @@
             "name": "Seesaw - BTC_LEGAL",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/src/seesaw.py",
+            "program": "${workspaceFolder}/seesaw/__main__.py",
             "console": "integratedTerminal",
             "args": [
                 "DemoTrade",
@@ -30,7 +30,7 @@
             "name": "Seesaw - XEM_BTC",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/src/seesaw.py",
+            "program": "${workspaceFolder}/seesaw/__main__.py",
             "console": "integratedTerminal",
             "args": [
                 "DemoTrade",
